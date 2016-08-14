@@ -18,6 +18,7 @@ from mpl_toolkits.mplot3d import Axes3D
 
 
 
+
 def pixel_integration(pixel,lam):
 
     '''
@@ -307,8 +308,6 @@ def filt():
     left,right = np.min(filter_b[:,0]),np.max(filter_b[:,0])
 
 def sphere():
-
-
 
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
