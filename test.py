@@ -44,7 +44,8 @@ def pixel_integration(pixel,lam):
     for i in range(0,len(pixel[:,0,0])):
         for j in range(0,len(pixel[0,:,0])):
 
-            mtr_int[i,j] = integrate.trapz( pixel[i,j,::-1] * sun_lumi * F_b(lam[::-1]), nu[::-1]) / (4 * np.pi * np.power(lum_dist*3.0857e18*1e6,2))
+            mtr_int[i,j] = integrate.trapz( pixel[i,j,::-1] * sun_lumi * F_b(lam[::-1]), nu[::-1])\
+                           / (4 * np.pi * np.power(lum_dist*3.0857e18*1e6,2)) /   integrate.trapz(F_b(lam[::-1]), nu[::-1])
 
     np.savetxt('f160w_filter_matrix.dat',mtr_int,fmt='%1.5e')
 
@@ -93,7 +94,7 @@ def noise_PSF():
     plt.figure(4)
     plt.imshow(np.log10(data), interpolation='nearest')
 
-    pixels_with_noise = fits.open('hlsp_hlf_hst_wfc3-60mas_goodss_f160w_v1.0_sci.fits')[0].data[15000:15000+nbins,10000:10000+nbins]
+    pixels_with_noise = fits.open('hlsp_hlf_hst_wfc3-60mas_goodss_f160w_v1.0_sci.fits')[0].data[11800:11800+nbins,14000:14000+nbins]
     zero_point = 25.94
     coeff = 10 ** (0.4 * (zero_point + 48.6))
 
@@ -160,7 +161,7 @@ def gal_data():
 
     muf_list = glob.glob("./drt/muv.bin*")             # Solar lumi/ Hz / Solar mass (log10 time in yr, metallicity, lambda) tables
     files = glob.glob("./rei05B_a0*/rei05B_a*.art")    # 3D HST Data
-    pf = yt.load(files[0])
+    pf = yt.load(files[1])
 
     lam_list = np.zeros(len(muf_list))
     lookup = np.zeros([len(muf_list), 188, 22])
@@ -181,11 +182,11 @@ def gal_data():
     dy = data[1:, 0] # log10 time in yr
 
     # to specify a region of interest in the sky
-    data = pf.sphere([1.52643699e+2/7.20807692,  1.08564619e+2/7.20807692,  9.16425327e+1/7.20807692], (25.0, "kpc")) # " 1 ---> 7.20807692e+22 "
+    data = pf.sphere('c', (25.0, "kpc"))
 
-    x = np.array(data[('STAR', 'POSITION_X')]) - 1.52643699e+2/7.20807692
-    y = np.array(data[('STAR', 'POSITION_Y')]) - 1.08564619e+2/7.20807692
-    z = np.array(data[('STAR', 'POSITION_Z')]) - 9.16425327e+1/7.20807692
+    x = np.array(data[('STAR', 'POSITION_X')] - data.center[0])
+    y = np.array(data[('STAR', 'POSITION_Y')] - data.center[1])
+    z = np.array(data[('STAR', 'POSITION_Z')] - data.center[2])
 
     m = data[('STAR', 'MASS')].in_units('g')/sun_mass
     met = data[('STAR', 'METALLICITY_SNIa')] + data[('STAR', 'METALLICITY_SNII')]
@@ -342,12 +343,12 @@ def sphere():
 
 
 
-sphere()
+#sphere()
 
-'''
+
 transmition_ISM()
 filt()
 gal_data()
 gal()
 noise_PSF()
-'''
+

@@ -20,7 +20,7 @@ from mpl_toolkits.mplot3d import Axes3D
 # [parameters for arg pars]
 
 filter_name = 'hst/wfc3/IR/f160w.dat'
-start,stop = 0,1                        # [number of 3d boxes with different data]
+start,stop = 1,2                        # [number of 3d boxes with different data]
 radius = 25                             # [radius of a sphere in kpc]
 mars2pix = 60                           # [milli-arcsec in pixel]
 zero_point = 25.94                      # [noise zero point]
@@ -88,14 +88,14 @@ def pixel_integration(pixel,lam):
 
     return mtr_int
 
-def noise_PSF(theta, phi, angle_idx, angles):
+def noise_PSF(theta, phi, angle_idx, angles, sim_idx):
 
     global image_int
 
     pixels_with_noise = fits.open('hlsp_hlf_hst_wfc3-60mas_goodss_f160w_v1.0_sci.fits')[0].data[15000:15000+nbins,10000:10000+nbins]
     coeff = 10 ** (0.4 * (zero_point + 48.6))
 
-    plt.figure(1)
+    plt.figure(2*sim_idx+1)
     ax1 = plt.subplot(int(angles/6),6,angle_idx+1)
     plt.imshow(np.log10(image_int), interpolation='nearest')
     ax1.set_yticklabels([])
@@ -110,7 +110,7 @@ def noise_PSF(theta, phi, angle_idx, angles):
 
     #np.savetxt('f160w_filter.dat',blurred,fmt='%1.5e')
 
-    plt.figure(2)
+    plt.figure(2*sim_idx+2)
     ax2 = plt.subplot(int(angles/6),6,angle_idx+1)
     plt.imshow(blurred, interpolation='nearest',cmap=plt.cm.gray,vmin=np.min(blurred), vmax=np.max(blurred))
     ax2.set_yticklabels([])
@@ -251,7 +251,7 @@ for i in range(start,stop):
               phi[j]*360/2/np.pi, theta[j]*360/2/np.pi))
 
         gal(theta=theta[j],phi=phi[j])
-        noise_PSF(theta=theta[j]*360/2/np.pi,phi=phi[j]*360/2/np.pi,angle_idx=j,angles=len(theta))
+        noise_PSF(theta=theta[j]*360/2/np.pi,phi=phi[j]*360/2/np.pi,angle_idx=j,angles=len(theta),sim_idx=i)
 
 plt.show()
 
