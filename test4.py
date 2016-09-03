@@ -10,17 +10,13 @@ from astropy.io           import fits
 
 def init():
 
-    global files,lums,lam_list,lamb
+    global info,lums,lam_list,lamb,max_flux,z_array,nbins_array,D_A_array,indices,nbins_min
 
-    #muf_list = glob.glob("/home/kaurov/kicp/code05A/drt/muv.bin*")
-    #files = glob.glob("/home/kaurov/kicp/code05A/OUT/rei05B_a0*/rei05B_a*.art")
-    muf_list = glob.glob("./drt/muv.bin*")
-    files = glob.glob("./rei05B_a0*/rei05B_a*.art")
+    muf_list = glob.glob("/home/kaurov/kicp/code05A/drt/muv.bin*")
     lums  = glob.glob("./output/lum_*")
-    sorted(files)
-    sorted(lums)
-    lam_list = np.zeros(len(muf_list))
-    print(len(lam_list))
+    info  = glob.glob("./output/info_*")
+
+    lam_list = np.zeros(len(muf_list)-1)
 
     for i in range(len(muf_list)-1):
 
@@ -31,48 +27,58 @@ def init():
 
     lamb = lam_list[np.argsort(lam_list)]
 
-def D_m(z):
-    if(Omega_k>0):
-        return  (9.26e27/h)/np.sqrt(Omega_k)*np.sinh(np.sqrt(Omega_k)*D_c(z)/(9.26e27/h))
-    else:
-        return D_c(z)
+    max_flux    = []
+    z_array     = []
+    nbins_array = []
+    D_A_array   = []
+    
+    for i in range(0,len(lums)):
 
-E = lambda x: 1/np.sqrt(Omega_M_0*np.power(1+x,3)+Omega_lam+Omega_k*np.power(1+x,2))
+        nbins,redshift,D_A,theta = np.loadtxt(info[i],skiprows=1)
+        nbins = int(nbins)
+
+        D_A_array.append(D_A)
+        z_array.append(redshift)
+        nbins_array.append(nbins)
+
+    z_array = np.array(z_array)
+    indices = np.argsort(z_array)[::-1]
+    z_array = z_array[indices]
+
+    D_A_array = np.array(D_A_array)
+    D_A_array = D_A_array[indices]
+
+    nbins_array = np.array(nbins_array)
+    nbins_array = nbins_array[indices]
+    nbins_min   = np.min(nbins_array)
+
+E   = lambda x: 1/np.sqrt(Omega_M_0*np.power(1+x,3)+Omega_lam+Omega_k*np.power(1+x,2))
+D_m = lambda z: D_c(z) # Omega_k = 0
 D_c = lambda z: (9.26e27/h)*integrate.quad(E, 0, z)[0]
 D_A = lambda z: D_m(z)/(1+z)/3.0857e18/1e6
 
 def compute():
 
-    global redshift, Omega_lam, Omega_M_0, Omega_k, h, input_data,nbins
+    global Omega_lam, Omega_M_0, Omega_k, h, input_data
 
-    max_flux    = []
-    z_array     = []
-    nbins_array = []
-    lum_d_array = []
+    Omega_lam = 0.7274
+    Omega_M_0 = 0.2726
+    Omega_k   = 0.0
+    h         = 0.704
 
+    plot_index = 0
 
-    for i in range(0,len(lums)):
+    for i in indices:
 
-        print(files[i])
+        input_data = np.load(lums[i])[:,:,:]
         print(lums[i])
-
-        pf = yt.load(files[i])
-        redshift = pf.current_redshift
-        Omega_lam = pf.omega_lambda
-        Omega_M_0 = pf.omega_matter
-        Omega_k   = 1 - Omega_lam - Omega_M_0
-        h         = pf.hubble_constant
-        input_data = np.load(lums[i])
-        nbins = np.shape(input_data)[0]
-        print(np.shape(input_data))
-
-        luminosity(i)
-        spectrum(i)
-        max_flux.append(filter_flux(i)[0])
-        lum_d_array.append(filter_flux(i)[1])
-        z_array.append(redshift)
-        nbins_array.append(nbins)
-
+        luminosity(plot_index)
+        if(plot_index % 3 ==0):
+            spectrum(plot_index)
+        max_flux.append(filter_flux(plot_index))
+        print(z_array[plot_index],nbins_array[plot_index],max_flux[-1])
+   
+        plot_index += 1
 
     plt.figure(0)
     plt.subplot(2,2,1)
@@ -82,29 +88,45 @@ def compute():
     plt.subplot(2,2,2)
     plt.title('Observed flux')
     plt.tight_layout(pad=0.0, w_pad=0.0, h_pad=0.0)
-    plt.plot(z_array,max_flux,label='flux')
-    plt.plot(z_array,np.ones(len(z_array))*max_noise,label='max noise')
-    plt.plot(z_array,np.ones(len(z_array))*mean_noise,label='mean noise')
-    plt.legend(prop={'size':10},loc=3)
+    plt.plot(z_array,max_flux,'b^',label='flux')
+    plt.plot(z_array,np.ones(len(z_array))*max_noise,label='max noise = '+str(round(max_noise,5)))
+    plt.legend(prop={'size':10},loc=4)
     plt.xlabel('z')
 
     plt.subplot(2,2,3)
-    plt.title('Luminosity distance')
+    plt.title('Angular distance')
     plt.tight_layout(pad=0.0, w_pad=0.0, h_pad=0.0)
-    plt.plot(z_array,lum_d_array)
-    plt.legend(prop={'size':10},loc=3)
+    plt.plot(z_array,D_A_array,'b^')
     plt.xlabel('z')
     plt.ylabel('$D_{L}$ [Mpc]')
 
     plt.subplot(2,2,4)
     plt.tight_layout(pad=0.0, w_pad=0.0, h_pad=0.0)
     plt.title('N pixels in image')
-    plt.plot(z_array,nbins_array)
+    plt.plot(z_array,nbins_array,'b^')
     plt.xlabel('z')
     plt.ylabel('N')
 
+    plt.figure(2)
+    plt.subplot(5,5,25)
+    plt.imshow(signal.fftconvolve(pixels_with_noise, PSF, mode='same'), interpolation='nearest',cmap=plt.cm.gray)
+    plt.yticks([])
+    plt.xticks([])
+    plt.tight_layout(pad=0.0, w_pad=0.0, h_pad=0.0)
+    plt.title('Noise')
 
-    plt.show()
+
+    plt.figure(0)
+    plt.savefig('figure0.pdf')
+    
+    plt.figure(1)
+    plt.savefig('figure1.pdf')
+
+    plt.figure(2)
+    plt.savefig('figure2.pdf')
+
+    plt.figure(3)
+    plt.savefig('figure3.pdf')
 
 
 def luminosity(i):
@@ -118,13 +140,12 @@ def luminosity(i):
             total_lum[j,k] = integrate.trapz(input_data[j,k,::-1], nu[::-1])
 
     plt.figure(1)
-    plt.subplot(5,4,i+1)
+    plt.subplot(5,5,i+1)
     plt.imshow(np.log10(total_lum), interpolation='nearest')
     plt.yticks([])
     plt.xticks([])
-    plt.title('z=' + str(round(redshift,2)) + ',nbins=' + str(nbins))
+    plt.title(str(round(z_array[i],2)))
     plt.tight_layout(pad=0.0, w_pad=0.0, h_pad=0.0)
-    plt.colorbar()
 
 
 def spectrum(i):
@@ -135,12 +156,13 @@ def spectrum(i):
         lum_nu[j] = np.max(input_data[:,:,j])
 
     plt.figure(0)
+    plt.ylim([26,29])
     plt.subplot(2,2,1)
     plt.tight_layout(pad=0.0, w_pad=0.0, h_pad=0.0)
-    plt.plot(lamb,np.log10(lum_nu),label='z=' + str(round(redshift,2)) + ',nbins=' + str(nbins))
+    plt.plot(lamb,np.log10(lum_nu),label='z=' + str(round(z_array[i],2)))
     plt.xlabel('$\\lambda$ [Angstrom]')
     plt.ylabel('$log10(L_{\\nu})$ [erg/s/Hz]')
-    plt.legend(prop={'size':10},loc=3)
+    plt.legend(prop={'size':3},loc=3)
 
 def filter_init():
 
@@ -176,38 +198,54 @@ def filter_init():
 
 def filter_flux(i):
 
-    global max_noise,mean_noise
+    global max_noise,pixels_with_noise,PSF
 
     nu = 2.99792458e10/(lamb/1e8)
     total_flux = np.zeros_like(input_data[:,:,0])
-    lum_dist = D_A(redshift) * (1 + redshift) * (1 + redshift)
-    print(D_A(redshift), lum_dist)
+    lum_dist = D_A(z_array[i]) * (1 + z_array[i]) * (1 + z_array[i])
+    if(nbins_array[i]%2==0):
+        b = int((nbins_array[i] - nbins_min)/2)
+        a = b
 
+    else:
+        b = int((nbins_array[i] - nbins_min)/2)
+        a = b+1
+ 
     for j in range(0,len(total_flux[:,0])):
         for k in range(0,len(total_flux[:,0])):
-            total_flux[j,k] = integrate.trapz(input_data[j,k,::-1] * F_filter(lamb[::-1]*(1+redshift)), nu[::-1]) / \
-                             integrate.trapz(F_filter(lamb[::-1]*(1+redshift)), nu[::-1]) * (1+redshift) / (4 * np.pi * np.power(lum_dist*3.0857e18*1e6,2))
+            total_flux[j,k] = integrate.trapz(input_data[j,k,::-1] * F_filter(lamb[::-1]*(1+z_array[i])), nu[::-1]) / \
+                             integrate.trapz(F_filter(lamb[::-1]*(1+z_array[i])), nu[::-1]) * (1+z_array[i]) / (4 * np.pi * np.power(lum_dist*3.0857e18*1e6,2))
 
-    pixels_with_noise = fits.open('hlsp_hlf_hst_wfc3-60mas_goodss_f160w_v1.0_sci.fits')[0].data[25000-15258:25000-15258+nbins,10326:10326+nbins]
+
+    pixels_with_noise = stats.norm.rvs(-0.00020178,0.00239519,nbins_min*nbins_min) # deep field
+    #pixels_with_noise = stats.norm.rvs(-5.49671285e-05,1.07018043e-02,nbins_min*nbins_min) # less deep field
+    pixels_with_noise = np.reshape(pixels_with_noise,(nbins_min,nbins_min))
+
     zero_point = 25.94
     coeff = 10 ** (0.4 * (zero_point + 48.6) )
-    flux_with_noise = total_flux*coeff + pixels_with_noise
+    flux_with_noise = total_flux[a:len(total_flux)-b,a:len(total_flux)-b]*coeff + pixels_with_noise
     PSF = fits.open('psf_wfc3ir_f160w.fits')[0].data
     flux_with_noise_psf = signal.fftconvolve(flux_with_noise, PSF, mode='same')
 
     max_noise  = np.max(pixels_with_noise)
-    mean_noise = np.mean(pixels_with_noise)
 
     plt.figure(2)
-    plt.subplot(5,4,i+1)
+    plt.subplot(5,5,i+1)
     plt.imshow(flux_with_noise_psf, interpolation='nearest',cmap=plt.cm.gray)
     plt.yticks([])
     plt.xticks([])
     plt.tight_layout(pad=0.0, w_pad=0.0, h_pad=0.0)
-    plt.title('z=' + str(round(redshift,2)) + ',nbins=' + str(nbins))
-    plt.colorbar()
+    plt.title( str(round(z_array[i],2)))
 
-    return np.max(flux_with_noise_psf),lum_dist
+    plt.figure(3)
+    plt.subplot(5,5,i+1)
+    plt.imshow(total_flux[a:len(total_flux)-b,a:len(total_flux)-b], interpolation='nearest',cmap=plt.cm.gray)
+    plt.yticks([])
+    plt.xticks([])
+    plt.tight_layout(pad=0.0, w_pad=0.0, h_pad=0.0)
+    plt.title( str(round(z_array[i],2)))
+
+    return np.max(total_flux*coeff)
 
 init()
 filter_init()
