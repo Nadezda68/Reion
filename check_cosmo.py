@@ -29,18 +29,19 @@ def D_m(z):
 
 D_c = lambda z: D_h*integrate.quad(E, 0, z)[0]
 
-D_A = lambda z: D_m(z)/(1+z) # [ in case Omega_k = 0 ]
+D_A = lambda z: D_m(z)/(1+z)
 
 
-test = np.linspace(0,5,200)
+test = np.linspace(0,50,500)
 D_test = []
 for i in range(0,len(test)):
-    D_test = np.append(D_test,D_A(test[i])/D_h)
+    D_test = np.append(D_test,D_A(test[i])/pc/1e6)
 plt.plot(test,D_test)
 plt.show()
 
 redshift = 8.0
 print(cp.distance.angular_diameter_distance(redshift, **cp.fidcosmo))
 print(D_A(redshift)/pc/1e6)
+print(cp.fidcosmo)
 
 
