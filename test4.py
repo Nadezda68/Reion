@@ -5,6 +5,7 @@ import matplotlib.pyplot  as plt
 from scipy.interpolate    import interp1d
 from scipy                import integrate
 from scipy                import signal
+from scipy                import stats
 from astropy.io           import fits
 
 
