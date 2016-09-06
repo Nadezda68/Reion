@@ -2,6 +2,8 @@ import yt
 import glob
 import numpy              as np
 import matplotlib.pyplot  as plt
+
+from matplotlib           import ticker
 from scipy.interpolate    import interp1d
 from scipy                import integrate
 from scipy                import signal
@@ -11,7 +13,7 @@ from astropy.io           import fits
 
 def init():
 
-    global info,lums,lam_list,lamb,max_flux,z_array,nbins_array,D_A_array,indices,nbins_min
+    global info,lums,lam_list,lamb,max_flux,z_array,nbins_array,D_A_array,indices,nbins_min,pixels_with_noise,noise_std,noise_mean
 
     muf_list = glob.glob("/home/kaurov/kicp/code05A/drt/muv.bin*")
     lums  = glob.glob("./output/lum_*")
@@ -53,6 +55,12 @@ def init():
     nbins_array = nbins_array[indices]
     nbins_min   = np.min(nbins_array)
 
+    pixels_with_noise = stats.norm.rvs(-0.00020178,0.00239519,nbins_min*nbins_min) # deep field
+    noise_std         = np.std(pixels_with_noise)
+    noise_mean        = np.mean(pixels_with_noise)
+    #pixels_with_noise = stats.norm.rvs(-5.49671285e-05,1.07018043e-02,nbins_min*nbins_min) # less deep field
+    pixels_with_noise = np.reshape(pixels_with_noise,(nbins_min,nbins_min))
+
 E   = lambda x: 1/np.sqrt(Omega_M_0*np.power(1+x,3)+Omega_lam+Omega_k*np.power(1+x,2))
 D_m = lambda z: D_c(z) # Omega_k = 0
 D_c = lambda z: (9.26e27/h)*integrate.quad(E, 0, z)[0]
@@ -91,6 +99,8 @@ def compute():
     plt.tight_layout(pad=0.0, w_pad=0.0, h_pad=0.0)
     plt.plot(z_array,max_flux,'b^',label='flux')
     plt.plot(z_array,np.ones(len(z_array))*max_noise,label='max noise = '+str(round(max_noise,5)))
+    plt.plot(z_array,np.ones(len(z_array))*noise_mean,label='mean noise = '+str(round(noise_mean,5)))
+    plt.plot(z_array,np.ones(len(z_array))*noise_std,label='std noise = '+str(round(noise_std,5)))
     plt.legend(prop={'size':10},loc=4)
     plt.xlabel('z')
 
@@ -217,11 +227,6 @@ def filter_flux(i):
             total_flux[j,k] = integrate.trapz(input_data[j,k,::-1] * F_filter(lamb[::-1]*(1+z_array[i])), nu[::-1]) / \
                              integrate.trapz(F_filter(lamb[::-1]*(1+z_array[i])), nu[::-1]) * (1+z_array[i]) / (4 * np.pi * np.power(lum_dist*3.0857e18*1e6,2))
 
-
-    pixels_with_noise = stats.norm.rvs(-0.00020178,0.00239519,nbins_min*nbins_min) # deep field
-    #pixels_with_noise = stats.norm.rvs(-5.49671285e-05,1.07018043e-02,nbins_min*nbins_min) # less deep field
-    pixels_with_noise = np.reshape(pixels_with_noise,(nbins_min,nbins_min))
-
     zero_point = 25.94
     coeff = 10 ** (0.4 * (zero_point + 48.6) )
     flux_with_noise = total_flux[a:len(total_flux)-b,a:len(total_flux)-b]*coeff + pixels_with_noise
@@ -240,11 +245,15 @@ def filter_flux(i):
 
     plt.figure(3)
     plt.subplot(5,5,i+1)
-    plt.imshow(total_flux[a:len(total_flux)-b,a:len(total_flux)-b], interpolation='nearest',cmap=plt.cm.gray)
+    plt.imshow(total_flux[a:len(total_flux)-b,a:len(total_flux)-b]*coeff/noise_std, interpolation='nearest')
     plt.yticks([])
     plt.xticks([])
-    plt.tight_layout(pad=0.0, w_pad=0.0, h_pad=0.0)
+    cb = plt.colorbar()
+    tick_locator = ticker.MaxNLocator(nbins=7)
+    cb.locator = tick_locator
+    cb.update_ticks()
     plt.title( str(round(z_array[i],2)))
+    plt.tight_layout(pad=0.0, w_pad=0.0, h_pad=0.0)
 
     return np.max(total_flux*coeff)
 
