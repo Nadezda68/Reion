@@ -245,13 +245,14 @@ def filter_flux(i):
 
     plt.figure(3)
     plt.subplot(5,5,i+1)
-    plt.imshow(total_flux[a:len(total_flux)-b,a:len(total_flux)-b]*coeff/noise_std, interpolation='nearest')
+    flux_std_psf = signal.fftconvolve(total_flux[a:len(total_flux)-b,a:len(total_flux)-b]*coeff/noise_std,PSF, mode='same')
+    plt.imshow(flux_std_psf, interpolation='nearest',vmin=0, vmax=5)
     plt.yticks([])
     plt.xticks([])
-    cb = plt.colorbar()
-    tick_locator = ticker.MaxNLocator(nbins=7)
-    cb.locator = tick_locator
-    cb.update_ticks()
+
+    if(i==22):
+        plt.colorbar(ticks=[0,1,2,3,4,5])
+
     plt.title( str(round(z_array[i],2)))
     plt.tight_layout(pad=0.0, w_pad=0.0, h_pad=0.0)
 
