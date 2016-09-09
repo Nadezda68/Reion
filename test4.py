@@ -233,7 +233,7 @@ def filter_flux(i):
     PSF = fits.open('psf_wfc3ir_f160w.fits')[0].data
     flux_with_noise_psf = signal.fftconvolve(flux_with_noise, PSF, mode='same')
 
-    max_noise  = np.max(pixels_with_noise)
+    max_noise = np.max(pixels_with_noise)
 
     plt.figure(2)
     plt.subplot(5,5,i+1)
@@ -241,7 +241,8 @@ def filter_flux(i):
     plt.yticks([])
     plt.xticks([])
     plt.tight_layout(pad=0.0, w_pad=0.0, h_pad=0.0)
-    plt.title( str(round(z_array[i],2)))
+    plt.title( str(round(z_array[i],2)) )
+    np.savetxt('./output_processed/data_z_' + str(i) +'.dat', flux_with_noise_psf,fmt='%1.5e')
 
     plt.figure(3)
     plt.subplot(5,5,i+1)
@@ -249,7 +250,7 @@ def filter_flux(i):
     plt.imshow(flux_std_psf, interpolation='nearest',vmin=0, vmax=5)
     plt.yticks([])
     plt.xticks([])
-
+    
     if(i==22):
         plt.colorbar(ticks=[0,1,2,3,4,5])
 

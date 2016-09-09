@@ -7,6 +7,13 @@ import matplotlib.pyplot as plt
 
 
 # [parameters]
+from scipy.interpolate    import interp2d
+
+table = np.loadtxt('table_transmition_ISM.dat')
+lam_rest   = table[1:,0]
+z          = table[0,1:]
+trans_coef = table[1:,1:]
+F_IMS = interp2d(z, lam_rest, trans_coef)
 
 h = 0.704
 pc = 3.0856776e18      # [cm]
@@ -31,7 +38,7 @@ D_c = lambda z: D_h*integrate.quad(E, 0, z)[0]
 
 D_A = lambda z: D_m(z)/(1+z)
 
-
+'''
 test = np.linspace(0,50,500)
 D_test = []
 for i in range(0,len(test)):
@@ -44,4 +51,94 @@ print(cp.distance.angular_diameter_distance(redshift, **cp.fidcosmo))
 print(D_A(redshift)/pc/1e6)
 print(cp.fidcosmo)
 
+'''
+
+from scipy.interpolate    import interp1d
+import glob
+
+muf_list = glob.glob("./drt/muv.bin*")
+lam_list = np.zeros(len(muf_list))
+
+for i in range(len(muf_list)-1):
+    f = open(muf_list[i])
+    header = f.readline()
+    f.close()
+    lam_list[i] = float(header.split()[2])
+
+lamb = lam_list[np.argsort(lam_list)]
+
+def filter_bandwidth(a,b,x):
+
+    global lambdas
+
+    '''
+
+    Initially we have SED tables for vast range of wavelengths and this function picks out those wavelengths, which
+    are in filter bandwidth.
+
+    '''
+
+    lambdas               = []
+
+    for i in range(0,len(x)):
+        if (a<=x[i] and x[i]<=b):
+            if(F_filter(x[i])>=1e-3):
+                lambdas.append(x[i])
+
+    print(len(lambdas))
+    return lambdas
+
+
+def filter_init(name):
+
+    global F_filter
+
+    temp_filters = open('data/FILTER.RES.latest', 'r')
+    filters = []
+    filters_names = []
+    first = True
+
+    for line in temp_filters:
+
+        if line[0] == ' ':
+            if not first:
+                filters.append(np.array(temp))
+
+            first = False
+            filters_names.append(line.split())
+            temp = []
+
+        else:
+            temp.append(np.array(line.split()).astype('float'))
+
+    filters.append(np.array(temp))
+    filters = np.array(filters)
+
+    for ifilt in range(len(filters_names)):
+        if filters_names[ifilt][1] == 'hst/wfc3/IR/f' + name + 'w.dat':
+            filter_b = np.array([filters[ifilt][:,1],filters[ifilt][:,2]])
+            filter_b = np.transpose(filter_b)
+
+    F_filter = interp1d(filter_b[:,0], filter_b[:,1],fill_value=0.0,bounds_error=False)
+
+    aaa = np.linspace(np.min(filter_b[:,0])/10,np.max(filter_b[:,0])*10,1000)
+    plt.figure(2)
+    plt.plot(filter_b[:,0],F_filter(filter_b[:,0]))
+    plt.plot(lam_rest*(12.46),F_IMS(11.46,lam_rest))
+
+
+    a,b = np.min(filter_b[:,0]),np.max(filter_b[:,0])
+
+    aa = filter_bandwidth(a,b,lamb*(12.46))
+    print(aa)
+
+    plt.plot(aa,F_filter(aa),'k*')
+
+    return a,b
+
+for i in [125,140,160]:
+    print(i)
+    print(filter_init(str(i)))
+
+plt.show()
 
