@@ -1,9 +1,7 @@
-import yt
 import glob
 import numpy              as np
 import matplotlib.pyplot  as plt
 
-from matplotlib           import ticker
 from scipy.interpolate    import interp1d
 from scipy                import integrate
 from scipy                import signal
