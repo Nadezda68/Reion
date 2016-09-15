@@ -16,10 +16,10 @@ def init():
     global info,lums,lam_list,lamb,z,indices,nbins_min,nbins,PSF,noise,noise_std
 
     muf_list = glob.glob("/home/kaurov/kicp/code05A/drt/muv.bin*")
-    info  = glob.glob("./output2/info_*")
-    lums  = np.vstack((sorted(glob.glob("./output2/lum_125_*")),
-                       sorted(glob.glob("./output2/lum_140_*")),
-                       sorted(glob.glob("./output2/lum_160_*"))))
+    info  = glob.glob("./output/info_*")
+    lums  = np.vstack((sorted(glob.glob("./output/lum_125_*")),
+                       sorted(glob.glob("./output/lum_140_*")),
+                       sorted(glob.glob("./output/lum_160_*"))))
 
     lam_list = np.zeros(len(muf_list)-1)
     for i in range(len(muf_list)-1):
@@ -48,17 +48,25 @@ def init():
     PSF = np.dstack((fits.open('PSFSTD_WFC3IR_F125W.fits')[0].data[1,:,:],
                      fits.open('PSFSTD_WFC3IR_F140W.fits')[0].data[1,:,:],
                      fits.open('PSFSTD_WFC3IR_F160W.fits')[0].data[1,:,:]))
+
     noise = np.vstack((stats.norm.rvs(-0.00015609,0.00275845,nbins_min*nbins_min),
                        stats.norm.rvs(-3.24841830e-05,3.26572605e-03,nbins_min*nbins_min),
                        stats.norm.rvs(-0.00020178,0.00239519,nbins_min*nbins_min)))
+
+    zero_point = np.array([26.23,26.45,25.94])
+    coeff = 10 ** ( 0.4 * (zero_point + 48.6) )
+
+    noise[0,:] = noise[0,:] * 1e23 * 1e9 / coeff[0]
+    noise[1,:] = noise[1,:] * 1e23 * 1e9 / coeff[1]
+    noise[2,:] = noise[2,:] * 1e23 * 1e9 / coeff[2]
+
     noise_std = np.array([np.std(noise[0,:]),
                           np.std(noise[1,:]),
                           np.std(noise[2,:])])
+
     noise = np.dstack((np.reshape(noise[0,:],(nbins_min,nbins_min)),
                        np.reshape(noise[1,:],(nbins_min,nbins_min)),
                        np.reshape(noise[2,:],(nbins_min,nbins_min))))
-
-    print(np.shape(lums),np.shape(PSF),np.shape(noise))
 
 E   = lambda x: 1/np.sqrt(Omega_M_0*np.power(1+x,3)+Omega_lam+Omega_k*np.power(1+x,2))
 D_m = lambda z: D_c(z)
@@ -96,7 +104,23 @@ def compute():
         filter_index += 1
 
     for i in range(0,len(z)):
-        np.savetxt('./output2_processed/data_total_' + str(i) +'.dat', filter_flux_sum[:,:,i],fmt='%1.5e')
+
+        if i<10:
+            np.savetxt('./output_processed/data_total_0' + str(i) +'.dat', filter_flux_sum[:,:,i],fmt='%1.5e')
+        else:
+            np.savetxt('./output_processed/data_total_' + str(i) +'.dat', filter_flux_sum[:,:,i],fmt='%1.5e')
+
+        plt.figure(0)
+        plt.subplot(4,5,i+1)
+        plt.imshow(filter_flux_sum[:,:,i], interpolation='nearest',vmin=0, vmax=5)
+        plt.yticks([])
+        plt.xticks([])
+        plt.title( str(round(z[i],2)))
+        plt.tight_layout(pad=0.0, w_pad=0.0, h_pad=0.0)
+        plt.contour(filter_flux_sum[:,:,i], levels=np.array([2,5]), lw=0.4,colors='k')
+
+    plt.figure(0)
+    plt.savefig('fig_total.pdf')
 
 
 def filter_init(name,z):
@@ -158,16 +182,14 @@ def filter_flux(i,l,name):
  
     for j in range(0,len(total_flux[:,0])):
         for k in range(0,len(total_flux[:,0])):
-            total_flux[j,k] = integrate.trapz(input_data[j,k,::-1] * F_filter(lamb_filter[::-1]*(1+z[i])), nu[::-1]) / \
+            total_flux[j,k] = 1e23 * 1e9 * integrate.trapz(input_data[j,k,::-1] * F_filter(lamb_filter[::-1]*(1+z[i])), nu[::-1]) / \
                              integrate.trapz(F_filter(lamb_filter[::-1]*(1+z[i])), nu[::-1]) * (1+z[i]) / (4 * np.pi * np.power(lum_dist*3.0857e18*1e6,2))
 
-    zero_point = 25.94
-    coeff = 10 ** ( 0.4 * (zero_point + 48.6) )
-    flux_with_noise = total_flux[a:a+nbins_min,a:a+nbins_min]*coeff + noise[:,:,l]
+    flux_with_noise = total_flux[a:a+nbins_min,a:a+nbins_min] + noise[:,:,l]
     flux_with_noise_psf = signal.fftconvolve(flux_with_noise, PSF[:,:,l], mode='same')
 
     plt.figure(1+2*l)
-    plt.subplot(5,5,i+1)
+    plt.subplot(4,5,i+1)
     plt.imshow(flux_with_noise_psf, interpolation='nearest',cmap=plt.cm.gray)
     plt.yticks([])
     plt.xticks([])
@@ -176,18 +198,20 @@ def filter_flux(i,l,name):
 
     filter_flux_sum[:,:,i] += flux_with_noise_psf/noise_std[l]
 
-    np.savetxt('./output2_processed/data_f' + name + 'w_'+ str(i) +'.dat', flux_with_noise_psf,fmt='%1.5e')
+    if(i<10):
+        np.savetxt('./output_processed/data_f' + name + 'w_0'+ str(i) +'.dat', flux_with_noise_psf,fmt='%1.5e')
+    else:
+        np.savetxt('./output_processed/data_f' + name + 'w_'+ str(i) +'.dat', flux_with_noise_psf,fmt='%1.5e')
 
     plt.figure(2+2*l)
-    plt.subplot(5,5,i+1)
-    flux_std_psf = signal.fftconvolve(total_flux[a:a+nbins_min,a:a+nbins_min]*coeff/noise_std[l],PSF[:,:,l], mode='same')
+    plt.subplot(4,5,i+1)
+    flux_std_psf = signal.fftconvolve(total_flux[a:a+nbins_min,a:a+nbins_min]/noise_std[l],PSF[:,:,l], mode='same')
     plt.imshow(flux_std_psf, interpolation='nearest',vmin=0, vmax=5)
     plt.yticks([])
     plt.xticks([])
-    if(i==22):
-        plt.colorbar(ticks=[0,1,2,3,4,5])
     plt.title( str(round(z[i],2)))
     plt.tight_layout(pad=0.0, w_pad=0.0, h_pad=0.0)
+    plt.contour(flux_std_psf, levels=np.array([2,5]),lw=0.4, colors='k')
 
 init()
 compute()

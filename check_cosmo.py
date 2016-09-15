@@ -135,10 +135,23 @@ def filter_init(name):
     plt.plot(aa,F_filter(aa),'k*')
 
     return a,b
-
+'''
 for i in [125,140,160]:
     print(i)
     print(filter_init(str(i)))
 
 plt.show()
+'''
 
+
+for i in range(0,19):
+    a = np.loadtxt('./output2_processed/data_f125w_'+ str(i) +'.dat')
+    b = np.loadtxt('./output2_processed/data_f140w_'+ str(i) +'.dat')
+    c = np.loadtxt('./output2_processed/data_f160w_'+ str(i) +'.dat')
+    d = np.loadtxt('./output2_processed/data_total_'+ str(i) +'.dat')
+    print(np.max(a),np.max(b),np.max(c),np.max(d))
+
+files = glob.glob("./drt/muv.bin*")
+print(files)
+files = sorted(files)
+print(files)

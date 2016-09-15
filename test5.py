@@ -11,7 +11,7 @@ parser.add_argument('integers', metavar='N', type=float, nargs='+', help='an int
 args = parser.parse_args()
 external_param = np.array(args.integers)
 
-input_start,input_stop,input_radius = int(external_param[0]),int(external_param[1]),float(30)
+input_start,input_stop,input_radius = int(external_param[0]),int(external_param[1]),float(150)
 if(len(external_param)==5):
     input_coord = float(external_param[2]),float(external_param[3]),float(external_param[4])
 else:
@@ -28,9 +28,8 @@ D_m = lambda x: D_c(x)
 D_c = lambda x: (9.26e27/h)*integrate.quad(E, 0, x)[0]
 D_A = lambda x: D_m(x)/(1+x)/3.0857e18/1e6
 
-muf_list = glob.glob("/home/kaurov/kicp/code05A/drt/muv.bin*")
-files = glob.glob("/home/kaurov/kicp/code05A/OUT/rei05B_a0*/rei05B_a*.art")
-sorted(files)
+muf_list = sorted(glob.glob("/home/kaurov/kicp/code05A/drt/muv.bin*"))
+files = sorted(glob.glob("/home/kaurov/kicp/code05A/OUT/rei05B_a0*/rei05B_a*.art"))
 
 lam_list = np.zeros(len(muf_list)-1)
 lookup = np.zeros([len(muf_list), 188, 22])
@@ -47,22 +46,25 @@ for i in range(len(muf_list)-1):
     data = np.genfromtxt(muf_list[i], skip_header=1)
     lookup[i, :, :] = data[1:,1:]
 
-lamb = np.array(lam_list[np.argsort(lam_list)])
 dx = data[0, 1:]
 dy = data[1:, 0]
 
 def filter_bandwidth(a,b,x):
 
-    global lambdas
-
-    lambdas = []
+    position_in_lam_array = []
+    lambdas               = []
 
     for i in range(0,len(x)):
         if (a<=x[i] and x[i]<=b):
             if(F_filter(x[i])>=1e-3):
+                position_in_lam_array.append(i)
                 lambdas.append(x[i])
 
-    return np.array(lambdas)
+    lambdas = np.array(lambdas)
+    position_in_lam_array = np.array(position_in_lam_array)
+    indices = np.argsort(lambdas)
+
+    return position_in_lam_array[indices]
 
 def filter_init(name,z):
 
@@ -96,9 +98,9 @@ def filter_init(name,z):
 
     F_filter = interp1d(filter_b[:,0], filter_b[:,1],fill_value=0.0,bounds_error=False)
     a,b = np.min(filter_b[:,0]),np.max(filter_b[:,0])
-    lamb_filter = filter_bandwidth(a,b,lamb*(1+z))/(1+z)
+    lamb_positions = filter_bandwidth(a,b,lam_list*(1+z))
 
-    return lamb_filter
+    return lamb_positions
 
 
 for simulation in range(input_start,input_stop):
@@ -133,19 +135,19 @@ for simulation in range(input_start,input_stop):
     for filter_name in ['125','140','160']:
 
         print('filter name: f' + filter_name + 'w')
-        lamb_filter = filter_init(filter_name,redshift)
-        print('lam max, lam min, N of lams: ',np.min(lamb_filter),np.max(lamb_filter),len(lamb_filter))
-        image = np.zeros([nbins, nbins, len(lamb_filter)])
+        lamb_positions = filter_init(filter_name,redshift)
+        print('lam max, lam min, N of lams: ',np.min(lam_list[lamb_positions]),np.max(lam_list[lamb_positions]),len(lamb_positions))
+        image = np.zeros([nbins, nbins, len(lamb_positions)])
         index = 0
 
-        for i in range(0,len(lamb_filter)):
+        for i in lamb_positions:
 
-            print('Computing luminosity...  step %i out of %i, lambda = %1.3e' % (index+1,len(lamb_filter),lamb_filter[i]))
+            print('Computing luminosity...  step %i out of %i, lambda = %1.3e' % (index+1,len(lamb_positions),lam_list[i]))
             interp = interp2d(dx, dy, lookup[i, :, :])
             L = np.zeros_like(m)
 
             for j in range(0,len(m)):
-                L[j] = F_IMS(redshift,lamb_filter[i])[0] * interp(met[j], t[j])[0] * m[j] * 3.828e33
+                L[j] = F_IMS(redshift,lam_list[i])[0] * interp(met[j], t[j])[0] * m[j] * 3.828e33
 
             xedges = np.linspace(-data.radius, data.radius, nbins+1)
             yedges = np.linspace(-data.radius, data.radius, nbins+1)
@@ -154,8 +156,8 @@ for simulation in range(input_start,input_stop):
 
             index += 1
 
-        np.save('output2/lum_' + filter_name + '_' + simulation_name + '.npy', image)
-        np.savetxt('output2/info_'  + simulation_name + '.dat',np.array([nbins,redshift,D_A(redshift),theta_arcsec]),header='Nbins, Redshift, Angular distance [Mpc], theta [arc-sec]')
+        np.save('output/lum_' + filter_name + '_' + simulation_name + '.npy', image)
+        np.savetxt('output/info_'  + simulation_name + '.dat',np.array([nbins,redshift,D_A(redshift),theta_arcsec]),header='Nbins, Redshift, Angular distance [Mpc], theta [arc-sec]')
 
 
 
