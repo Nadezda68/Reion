@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 # [parameters]
 from scipy.interpolate    import interp2d
 
-table = np.loadtxt('data/table_transmition_ISM.dat')
+table = np.loadtxt('../data/table_transmition_ISM.dat')
 lam_rest   = table[1:,0]
 z          = table[0,1:]
 trans_coef = table[1:,1:]
@@ -138,6 +138,7 @@ def filter_init(name):
 
     return a,b
 
+'''
 for i in [125,140,160]:
     print(i)
     print(filter_init(str(i)))
@@ -145,7 +146,7 @@ for i in [125,140,160]:
 plt.show()
 
 
-'''
+
 for i in range(0,19):
     a = np.loadtxt('./output2_processed/data_f125w_'+ str(i) +'.dat')
     b = np.loadtxt('./output2_processed/data_f140w_'+ str(i) +'.dat')
@@ -157,5 +158,33 @@ files = glob.glob("./drt/muv.bin*")
 print(files)
 files = sorted(files)
 print(files)
+
+from astropy.io           import fits
+PSF = np.dstack((fits.open('../data/PSFSTD_WFC3IR_F125W.fits')[0].data[1,:,:],
+                 fits.open('../data/PSFSTD_WFC3IR_F140W.fits')[0].data[1,:,:],
+                 fits.open('../data/PSFSTD_WFC3IR_F160W.fits')[0].data[1,:,:]))
+
+print(np.shape(PSF))
 '''
+
+
+
+H_0 = 69.6 * 1e5 / (1e6 * 3.0856776e18) # [from km/sec/Mpc to 1/sec]
+Omega_lam = 0.7
+Omega_M_0 = 0.3
+
+E   = lambda x: 1/np.sqrt(Omega_M_0*np.power(1+x,3)+Omega_lam)/(1+x)
+t   = lambda x: 1/H_0*integrate.quad(E, 0, x)[0]/31556952/1e9
+
+for z in [0.326,9.9,1100,6000,1e9]:
+    if(z<5e4):
+        print('%3.5f Gyr from now' % t(z))
+    else:
+        print('%3.5f kyr from now' % (1e6*t(z)))
+
+
+
+
+
+
 
