@@ -31,13 +31,15 @@ D_c = lambda x: (9.26e27/h)*integrate.quad(E, 0, x)[0]
 D_A = lambda x: D_m(x)/(1+x)/cm_in_pc/1e6  # Angular distance [Mpc]
 
 
-def init_input_data(sim_start, sim_stop, sim_radius=30, center_x=20.913085937, center_y=14.918945312, center_z=12.567382812):
+def init_input_data(sim, sim2,  sim_start, sim_stop, center_x=36.896144300685606, center_y=30.423436533666489, center_z=34.667022672482432, sim_radius=30):
 
-    global input_start, input_stop, input_radius, input_coord
+    global input_start, input_stop, input_radius, input_coord, N_sim, N_sim_2
 
-    input_start, input_stop, input_radius = int(sim_start), int(sim_stop), sim_radius
+    N_sim, N_sim_2, input_start, input_stop, input_radius = int(sim), int(sim2), int(sim_start), int(sim_stop), sim_radius
     input_coord = np.array([center_x, center_y, center_z])
-
+    print('N_sim = ', N_sim, N_sim_2)
+    print('Radius = ', input_radius)
+    print('Center coords = ', input_coord)
 
 def init_transmission_function():
 
@@ -109,9 +111,7 @@ def main():
     init_lum_tables()
     init_transmission_function()
 
-    #files = sorted(glob.glob("/home/kaurov/kicp/code05A/OUT/rei05B_a0*/rei05B_a*.art"))
-    files = sorted(glob.glob("/home/kaurov/scratch/rei/code05/OUT_00001_010_080B/rei00001_010_080B_a0*/rei00001_010_080B_a*.art"))
-    # files = sorted(glob.glob("data/rei05B_a0*/rei05B_a*.art"))
+    files = sorted(glob.glob('/home/kaurov/scratch/rei/code05/OUT_000' + str(N_sim) + str(N_sim_2) + '_010_080B/rei000' +  str(N_sim) + str(N_sim_2) + '_010_080B_a0*/rei000' + str(N_sim) + str(N_sim_2) + '_010_080B_a0.*.art'))
 
     for simulation in range(input_start,input_stop):
 
@@ -119,16 +119,28 @@ def main():
 
         pf = yt.load(files[simulation])
         simulation_name = files[simulation][-29:-4]
-        data = pf.sphere('max', (input_radius, "kpc"))
-        print(data.center[0].in_units('kpc')),data.center[1].in_units('kpc')),data.center[2].in_units('kpc')))
-
+        data = pf.sphere(input_coord, (input_radius, "kpc"))
+   
         x = np.array(data[('STAR', 'POSITION_X')] - data.center[0])
         y = np.array(data[('STAR', 'POSITION_Y')] - data.center[1])
         m = data[('STAR', 'MASS')].in_units('msun')
         met = data[('STAR', 'METALLICITY_SNIa')].in_units('Zsun') + data[('STAR', 'METALLICITY_SNII')].in_units('Zsun')
-        t = np.log10(data[('STAR', 'age')].in_units('yr'))
-        redshift = pf.current_redshift
+        t = (data[('STAR', 'age')].in_units('yr'))
 
+        print('number of objects', len(t))        
+        erase = np.where(t<=0)[0]
+        print(erase)
+        
+        x = np.delete(x,erase)
+        y = np.delete(y,erase)
+        met = np.delete(met,erase)
+        t = np.log10(np.delete(t,erase))
+        m = np.delete(m,erase)
+
+        print('number of objects', len(t))
+        print('mean t', np.mean(t))
+
+        redshift = pf.current_redshift
         theta_arcsec = (2 * input_radius * 1e3) / (D_A(redshift) * 1e6) * 206265.0
         nbins = int(theta_arcsec / HST_WFC3_pixel_size)
 
@@ -151,15 +163,19 @@ def main():
                 for j in range(0,len(m)):
                     L[j] = F_ISM(redshift,lam_list[i])[0] * interp(met[j], t[j])[0] * m[j] * sun_luminosity
 
+
                 xedges = np.linspace(-data.radius, data.radius, nbins+1)
                 yedges = np.linspace(-data.radius, data.radius, nbins+1)
                 H,X,Y = np.histogram2d(x, y, bins=(xedges, yedges), weights = L)
                 image[:, :, index] = np.rot90(H)
 
                 index += 1
+                print(np.mean(H))
 
             np.save('output/lum_' + filter_name + '_' + simulation_name + '.npy', image)
             np.savetxt('output/info_'  + simulation_name + '.dat',np.array([nbins,redshift,D_A(redshift),theta_arcsec]),
                        header='Nbins, Redshift, Angular distance [Mpc], theta [arc-sec]')
+
+        print(data.center[0],data.center[1],data.center[2])
 
 main()

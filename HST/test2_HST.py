@@ -1,12 +1,18 @@
 import glob
 import numpy              as np
 import matplotlib.pyplot  as plt
+import argparse
 
 from scipy.interpolate    import interp1d
 from scipy                import integrate
 from scipy                import signal
 from scipy                import stats
 from astropy.io           import fits
+
+parser = argparse.ArgumentParser(description='Process integers.')
+parser.add_argument('floats', metavar='N', type=int, nargs='+', help='a float for the accumulator')
+args = parser.parse_args()
+external_param = np.array(args.floats)
 
 cm_in_pc            = 3.0857e18
 sun_luminosity      = 3.828e33  # [erg/sec]
@@ -28,10 +34,10 @@ def init_lum_tables():
 
     global lam_list, lamb
 
-    muf_list = sorted(glob.glob("/home/kaurov/kicp/code05A/drt/muv.bin*"))
-    lam_list = np.zeros(len(muf_list)-1)
+    muf_list = sorted(glob.glob("data/drt/muv.bin*"))
+    lam_list = np.zeros(len(muf_list))
 
-    for i in range(len(muf_list)-1):
+    for i in range(len(muf_list)):
 
         f           = open(muf_list[i])
         header      = f.readline()
@@ -46,10 +52,10 @@ def read_simulation_data():
 
     global info, lums, z, nbins, nbins_min, z, indices
 
-    info = glob.glob("./output/info_*")
-    lums = np.vstack((sorted(glob.glob("./output/lum_125_*")),
-                      sorted(glob.glob("./output/lum_140_*")),
-                      sorted(glob.glob("./output/lum_160_*"))))
+    info = glob.glob("./output/info_rei000" + str(N_sim_1) + str(N_sim_2) + "_*")
+    lums = np.vstack((sorted(glob.glob("./output/lum_125_rei000" + str(N_sim_1) + str(N_sim_2) + "_*")),
+                      sorted(glob.glob("./output/lum_140_rei000" + str(N_sim_1) + str(N_sim_2) + "_*")),
+                      sorted(glob.glob("./output/lum_160_rei000" + str(N_sim_1) + str(N_sim_2) + "_*"))))
 
     z     = []
     nbins = []
@@ -123,15 +129,17 @@ def filter_bandwidth(a,b,x):
 
     for i in range(0,len(x)):
         if (a<=x[i] and x[i]<=b):
-            if(F_filter(x[i])>=1e-3):
+            if(F_filter(x[i])>=0.5e-3):
                 lambdas.append(x[i])
 
     return lambdas
 
 
-def main():
+def main(sim1,sim2):
 
-    global input_data, lamb_filter, flux_noise_psf_std_sum, flux_psf_std_sum
+    global input_data, lamb_filter, flux_noise_psf_std_sum, flux_psf_std_sum, N_sim_1, N_sim_2
+    
+    N_sim_1, N_sim_2 = sim1, sim2
 
     read_simulation_data()
 
@@ -145,7 +153,7 @@ def main():
 
     for filter_name in ['125','140','160']:
 
-        for i in range(4,len(z)):
+        for i in range(0,len(z)):
 
             input_data  = np.load(lums[filter_index,i])
             lamb_filter = filter_init(filter_name,z[i])
@@ -155,25 +163,25 @@ def main():
             print(z[i],nbins[i])
 
         plt.figure(2+3*filter_index)
-        plt.savefig('fig_f'+filter_name+'w_1.pdf', format='pdf')
+        plt.savefig('./rei000' + str(N_sim_1) + str(N_sim_2) + '_010_080B/figures/fig_f'+filter_name+'w_1.pdf', format='pdf')
         plt.figure(3+3*filter_index)
-        plt.savefig('fig_f'+filter_name+'w_2.pdf', format='pdf')
+        plt.savefig('./rei000' + str(N_sim_1) + str(N_sim_2) + '_010_080B/figures/fig_f'+filter_name+'w_2.pdf', format='pdf')
         plt.figure(4+3*filter_index)
-        plt.savefig('fig_f'+filter_name+'w_3.pdf', format='pdf')
+        plt.savefig('./rei000' + str(N_sim_1) + str(N_sim_2) + '_010_080B/figures/fig_f'+filter_name+'w_3.pdf', format='pdf')
 
         filter_index += 1
 
     for i in range(0,len(z)):
 
         if i<10:
-            np.savetxt('./output_processed/data_total_0_0' + str(i) +'.dat', flux_psf_std_sum[:,:,i],fmt='%1.5e')
-            np.savetxt('./output_processed/data_total_1_0' + str(i) +'.dat', flux_noise_psf_std_sum[:,:,i],fmt='%1.5e')
+            np.savetxt('./rei000' + str(N_sim_1) + str(N_sim_2) + '_010_080B/processed_output/data_total_0_0' + str(i) +'.dat', flux_psf_std_sum[:,:,i],fmt='%1.5e')
+            np.savetxt('./rei000' + str(N_sim_1) + str(N_sim_2) + '_010_080B/processed_output/data_total_1_0' + str(i) +'.dat', flux_noise_psf_std_sum[:,:,i],fmt='%1.5e')
         else:
-            np.savetxt('./output_processed/data_total_0_' + str(i) +'.dat', flux_psf_std_sum[:,:,i],fmt='%1.5e')
-            np.savetxt('./output_processed/data_total_1_' + str(i) +'.dat', flux_noise_psf_std_sum[:,:,i],fmt='%1.5e')
+            np.savetxt('./rei000' + str(N_sim_1) + str(N_sim_2) + '_010_080B/processed_output/data_total_0_' + str(i) +'.dat', flux_psf_std_sum[:,:,i],fmt='%1.5e')
+            np.savetxt('./rei000' + str(N_sim_1) + str(N_sim_2) + '_010_080B/processed_output/data_total_1_' + str(i) +'.dat', flux_noise_psf_std_sum[:,:,i],fmt='%1.5e')
 
         plt.figure(0)
-        plt.subplot(4,5,i+1)
+        plt.subplot(5,5,i+1)
         plt.imshow(flux_psf_std_sum[:,:,i], interpolation='nearest',vmin=0, vmax=5)
         plt.yticks([])
         plt.xticks([])
@@ -182,7 +190,7 @@ def main():
         plt.contour(flux_psf_std_sum[:,:,i], levels=np.array([2,5]), lw=0.4,colors='k')
 
         plt.figure(1)
-        plt.subplot(4,5,i+1)
+        plt.subplot(5,5,i+1)
         plt.imshow(flux_noise_psf_std_sum[:,:,i], interpolation='nearest',vmin=0, vmax=5)
         plt.yticks([])
         plt.xticks([])
@@ -191,9 +199,9 @@ def main():
         plt.contour(flux_noise_psf_std_sum[:,:,i], levels=np.array([2,5]), lw=0.4,colors='k')
 
     plt.figure(0)
-    plt.savefig('fig_total_2.pdf', format='pdf')
+    plt.savefig('./rei000' + str(N_sim_1) + str(N_sim_2) + '_010_080B/figures/fig_total_2.pdf', format='pdf')
     plt.figure(1)
-    plt.savefig('fig_total_3.pdf', format='pdf')
+    plt.savefig('./rei000' + str(N_sim_1) + str(N_sim_2) + '_010_080B/figures/fig_total_3.pdf', format='pdf')
 
 def filter_flux(i,l,name):
 
@@ -216,7 +224,7 @@ def filter_flux(i,l,name):
     flux_noise_psf_std = flux_noise_psf/noise_std[l]
 
     plt.figure(2+3*l)
-    plt.subplot(4,5,i+1)
+    plt.subplot(5,5,i+1)
     plt.imshow(flux_noise_psf, interpolation='nearest',cmap=plt.cm.gray)
     plt.yticks([])
     plt.xticks([])
@@ -224,7 +232,7 @@ def filter_flux(i,l,name):
     plt.title( str(round(z[i],2)))
 
     plt.figure(3+3*l)
-    plt.subplot(4,5,i+1)
+    plt.subplot(5,5,i+1)
     plt.imshow(flux_psf_std, interpolation='nearest',vmin=0, vmax=5)
     plt.yticks([])
     plt.xticks([])
@@ -233,7 +241,7 @@ def filter_flux(i,l,name):
     plt.contour(flux_psf_std, levels=np.array([2,5]),lw=0.4, colors='k')
 
     plt.figure(4+3*l)
-    plt.subplot(4,5,i+1)
+    plt.subplot(5,5,i+1)
     plt.imshow(flux_noise_psf_std, interpolation='nearest',vmin=0, vmax=5)
     plt.yticks([])
     plt.xticks([])
@@ -245,12 +253,12 @@ def filter_flux(i,l,name):
     flux_noise_psf_std_sum[:,:,i] += flux_noise_psf_std
 
     if(i<10):
-        np.savetxt('./output_processed/data_f' + name + 'w_1_0'+ str(i) +'.dat', flux_noise_psf,fmt='%1.5e')
-        np.savetxt('./output_processed/data_f' + name + 'w_2_0'+ str(i) +'.dat', flux_psf_std,fmt='%1.5e')
-        np.savetxt('./output_processed/data_f' + name + 'w_3_0'+ str(i) +'.dat', flux_noise_psf_std,fmt='%1.5e')
+        np.savetxt('./rei000' + str(N_sim_1) + str(N_sim_2) + '_010_080B/processed_output/data_f' + name + 'w_1_0'+ str(i) +'.dat', flux_noise_psf,fmt='%1.5e')
+        np.savetxt('./rei000' + str(N_sim_1) + str(N_sim_2) + '_010_080B/processed_output/data_f' + name + 'w_2_0'+ str(i) +'.dat', flux_psf_std,fmt='%1.5e')
+        np.savetxt('./rei000' + str(N_sim_1) + str(N_sim_2) + '_010_080B/processed_output/data_f' + name + 'w_3_0'+ str(i) +'.dat', flux_noise_psf_std,fmt='%1.5e')
     else:
-        np.savetxt('./output_processed/data_f' + name + 'w_1_'+ str(i) +'.dat', flux_noise_psf,fmt='%1.5e')
-        np.savetxt('./output_processed/data_f' + name + 'w_2_'+ str(i) +'.dat', flux_psf_std,fmt='%1.5e')
-        np.savetxt('./output_processed/data_f' + name + 'w_2_'+ str(i) +'.dat', flux_noise_psf_std,fmt='%1.5e')
+        np.savetxt('./rei000' + str(N_sim_1) + str(N_sim_2) + '_010_080B/processed_output/data_f' + name + 'w_1_'+ str(i) +'.dat', flux_noise_psf,fmt='%1.5e')
+        np.savetxt('./rei000' + str(N_sim_1) + str(N_sim_2) + '_010_080B/processed_output/data_f' + name + 'w_2_'+ str(i) +'.dat', flux_psf_std,fmt='%1.5e')
+        np.savetxt('./rei000' + str(N_sim_1) + str(N_sim_2) + '_010_080B/processed_output/data_f' + name + 'w_2_'+ str(i) +'.dat', flux_noise_psf_std,fmt='%1.5e')
 
-main()
+main(*external_param)
