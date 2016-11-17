@@ -111,7 +111,8 @@ def main():
     init_lum_tables()
     init_transmission_function()
 
-    files = sorted(glob.glob('/home/kaurov/scratch/rei/code05/OUT_000' + str(N_sim) + str(N_sim_2) + '_010_080B/rei000' +  str(N_sim) + str(N_sim_2) + '_010_080B_a0*/rei000' + str(N_sim) + str(N_sim_2) + '_010_080B_a0.*.art'))
+    files = sorted(glob.glob('/home/kaurov/scratch/rei/code05/OUT_000' + str(N_sim) + str(N_sim_2) + '_010_080B/rei000'
+                             +  str(N_sim) + str(N_sim_2) + '_010_080B_a0*/rei000' + str(N_sim) + str(N_sim_2) + '_010_080B_a0.*.art'))
 
     for simulation in range(input_start,input_stop):
 
@@ -138,7 +139,6 @@ def main():
         m = np.delete(m,erase)
 
         print('number of objects', len(t))
-        print('mean t', np.mean(t))
 
         redshift = pf.current_redshift
         theta_arcsec = (2 * input_radius * 1e3) / (D_A(redshift) * 1e6) * 206265.0

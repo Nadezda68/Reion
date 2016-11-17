@@ -4,17 +4,12 @@ import numpy              as np
 import healpy             as hp
 import cosmolopy          as cp
 import matplotlib.pyplot  as plt
-import matplotlib.cm      as cm
-import scipy.ndimage      as ndimage
 
 from scipy                import signal
 from scipy.interpolate    import interp1d
 from scipy.interpolate    import interp2d
-from scipy.interpolate    import RegularGridInterpolator
 from scipy                import integrate
 from astropy.io           import fits
-from astropy              import wcs
-from mpl_toolkits.mplot3d import Axes3D
 
 
 # [parameters for arg pars]
