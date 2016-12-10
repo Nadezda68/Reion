@@ -1,0 +1,5 @@
+TINYTIM=/home/maryhallow/tinytim-7.5
+export TINYTIM
+alias tiny1=’$TINYTIM/tiny1’
+alias tiny2=’$TINYTIM/tiny2’
+alias tiny3=’$TINYTIM/tiny3’ 
