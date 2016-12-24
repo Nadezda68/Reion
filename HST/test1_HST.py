@@ -124,6 +124,7 @@ def main():
    
         x = np.array(data[('STAR', 'POSITION_X')] - data.center[0])
         y = np.array(data[('STAR', 'POSITION_Y')] - data.center[1])
+        z = np.array(data[('STAR', 'POSITION_Z')] - data.center[2])
         m = data[('STAR', 'MASS')].in_units('msun')
         met = data[('STAR', 'METALLICITY_SNIa')].in_units('Zsun') + data[('STAR', 'METALLICITY_SNII')].in_units('Zsun')
         t = (data[('STAR', 'age')].in_units('yr'))
@@ -134,6 +135,7 @@ def main():
         
         x = np.delete(x,erase)
         y = np.delete(y,erase)
+        z = np.delete(z,erase)
         met = np.delete(met,erase)
         t = np.log10(np.delete(t,erase))
         m = np.delete(m,erase)
