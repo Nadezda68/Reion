@@ -36,7 +36,7 @@ D_A = lambda x: D_m(x)/(1+x)/cm_in_pc/1e6  # Angular distance [Mpc]
 
 
 def init_input_data(sim, sim2,  sim_start, sim_stop, center_x, center_y, center_z,
-                    telescope_input, filter_input, sim_radius=30, projection_input='all'):
+                    telescope_input='HST', filter_input='f140w', sim_radius=30, projection_input='all'):
 
     '''
     sim, sim2 - two digits of a number, that determines which ART simulation to load (e.g. for
@@ -95,8 +95,8 @@ def init_lum_tables():
     lookup = np.zeros([len(muf_list), 188, 22])
 
     for i in range(len(muf_list)):
-        f           = open(muf_list[i])
-        header      = f.readline()
+        f = open(muf_list[i])
+        header = f.readline()
         lam_list[i] = float(header.split()[2])
 
         f.close()
