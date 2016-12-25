@@ -36,7 +36,7 @@ D_A = lambda x: D_m(x)/(1+x)/cm_in_pc/1e6  # Angular distance [Mpc]
 
 
 def init_input_data(sim, sim2,  sim_start, sim_stop, center_x, center_y, center_z,
-                    telescope_input='HST', filter_input='f140w', sim_radius=30, projection_input='all'):
+                    telescope_input='HST', filter_input='f140w', sim_radius=100, projection_input='all'):
 
     '''
     sim, sim2 - two digits of a number, that determines which ART simulation to load (e.g. for
@@ -55,11 +55,11 @@ def init_input_data(sim, sim2,  sim_start, sim_stop, center_x, center_y, center_
     filter_input - 'F150W' and 'F200W' for JWST and 'f125w', 'f140w' and 'f160w' for HST
     '''
 
-    global input_start, input_stop, input_radius, input_coord, N_sim, N_sim_2, telescope, cam_filter, projection
+    global input_start, input_stop, input_radius, input_coord, N_sim, N_sim_2, telescope, filter_name, projection
 
     N_sim, N_sim_2, input_start, input_stop, input_radius = int(sim), int(sim2), int(sim_start), int(sim_stop), sim_radius
     input_coord = np.array([center_x, center_y, center_z])
-    cam_filter = filter_input
+    filter_name = filter_input
     telescope = telescope_input
     projection = projection_input
 
@@ -108,13 +108,13 @@ def init_lum_tables():
     logt = data[1:, 0]  # log10(t) [yr]
 
 
-def filter_bandwidth(a,b,x):
+def filter_bandwidth(a, b, x):
 
     position_in_lam_array = []
 
     for i in range(0,len(x)):
-        if (a<=x[i] and x[i]<=b):
-            if(F_filter(x[i])>=0.5e-3):
+        if a <=x[i] and x[i] <= b:
+            if F_filter(x[i])>=0.5e-3:
                 position_in_lam_array.append(i)
 
     return position_in_lam_array
@@ -128,7 +128,7 @@ def HST_filter_init(z):
 
     global F_filter
 
-    filter_b = np.loadtxt('data/filter_' + cam_filter + '.dat')
+    filter_b = np.loadtxt('data/filter_' + filter_name + '.dat')
     F_filter = interp1d(filter_b[:,0], filter_b[:,1],fill_value=0.0,bounds_error=False)
     a,b = np.min(filter_b[:,0]),np.max(filter_b[:,0])
     lamb_positions = filter_bandwidth(a,b,lam_list*(1+z))
@@ -144,7 +144,7 @@ def JWST_filter_init(z):
 
     global F_filter
 
-    wavelengths,transmission = np.loadtxt('data/filter_' + cam_filter + '.dat',skiprows=1).T
+    wavelengths, transmission = np.loadtxt('data/filter_' + filter_name + '.dat',skiprows=1).T
     wavelengths *= 1e4
     F_filter = interp1d(wavelengths, transmission,fill_value=0.0,bounds_error=False)
     a,b = np.min(wavelengths),np.max(wavelengths)
@@ -200,7 +200,7 @@ def main():
         print('Simulation name = ',	simulation_name)
         print('z = %1.3e, D_A = %1.3e [Mpc], Nbins = %i' % (redshift, D_A(redshift), nbins))
 
-        print('filter name:' + cam_filter)
+        print('filter name:' + filter_name)
 
         if telescope == 'HST':
             lamb_positions = HST_filter_init(redshift)
@@ -245,10 +245,10 @@ def main():
 
             index += 1
 
-        np.save('output/lum_' + cam_filter + '_' + simulation_name + '.npy', image)
-        np.savetxt('output/info_'  + simulation_name + '.dat',np.array([nbins,redshift,D_A(redshift),theta_arcsec,
-                                                                         input_coord[0], input_coord[1], input_coord[2],
+        np.save('output/lum_' + filter_name + '_' + simulation_name + '.npy', image)
+        np.savetxt('output/info_' + simulation_name + '.dat', np.array([redshift,D_A(redshift),theta_arcsec,
+                                                                        input_coord[0], input_coord[1], input_coord[2],
                                                                         input_radius]),
-                   header='Nbins, Redshift, Angular distance [Mpc], theta [arc-sec], x_center, y_center, z_center, radius [kpc]')
+                   header='Redshift, Angular distance [Mpc], theta [arc-sec], x_center, y_center, z_center, radius [kpc]')
 
 main()
