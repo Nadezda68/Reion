@@ -120,7 +120,7 @@ def read_simulation_data(filter_name='f140w', telescope='HST'):
     angles = []
 
     for i in range(0,len(info)):
-        N_input, z_input, DA_input, theta_input, c_x, c_y, c_z, r = np.loadtxt(info[i], skiprows=1)
+        z_input, DA_input, theta_input, c_x, c_y, c_z, r = np.loadtxt(info[i], skiprows=1)
         z.append(z_input)
         if telescope == 'HST':
             nbins.append(int(theta_input / HST_WFC3CAM_pixel_size))
