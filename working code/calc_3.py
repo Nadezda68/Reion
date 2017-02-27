@@ -3,17 +3,11 @@ import numpy as np
 from photutils import detect_sources
 import matplotlib.pylab as plt
 from matplotlib.ticker import AutoMinorLocator
-from scipy.optimize import curve_fit
-import matplotlib.cm as cm
-from photutils.utils import random_cmap
 from photutils import CircularAperture
-from photutils import DAOStarFinder
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-from matplotlib_scalebar.scalebar import ScaleBar
-from matplotlib_scalebar.scalebar import IMPERIAL_LENGTH
-from scipy.interpolate import interp1d
-import cosmolopy
 from cosmolopy import distance as d
+from scipy import integrate
+
 cosmo = {'omega_M_0' : 0.2726, 'omega_lambda_0' : 0.7274, 'h' : 0.704}
 cosmo = d.set_omega_k_0(cosmo)
 
@@ -166,13 +160,6 @@ def step_1():
         sim_09_redshifts.append(redshift)
     sim_09_ang_size = Angular_size
 
-    print(sim_01_ang_size)
-    print(sim_02_ang_size)
-    print(sim_03_ang_size)
-    print(sim_04_ang_size)
-    print(sim_06_ang_size)
-    print(sim_09_ang_size)
-
     print(1)
 
     threshold = 2
@@ -285,24 +272,6 @@ def step_1():
         sim_09_number_of_sources[i, 1, 2] = detect_sources(temp, threshold, npixels).nlabels
 
     print(7)
-
-    HST_01 = (sim_01_number_of_sources[:, 0, 0] + sim_01_number_of_sources[:, 0, 1] + sim_01_number_of_sources[:, 0, 2])/3
-    JWST_01 = (sim_01_number_of_sources[:, 1, 0] + sim_01_number_of_sources[:, 1, 1] + sim_01_number_of_sources[:, 1, 2])/3
-
-    HST_02 = (sim_02_number_of_sources[:, 0, 0] + sim_02_number_of_sources[:, 0, 1] + sim_02_number_of_sources[:, 0, 2])/3
-    JWST_02 = (sim_02_number_of_sources[:, 1, 0] + sim_02_number_of_sources[:, 1, 1] + sim_02_number_of_sources[:, 1, 2])/3
-
-    HST_03 = (sim_03_number_of_sources[:, 0, 0] + sim_03_number_of_sources[:, 0, 1] + sim_03_number_of_sources[:, 0, 2])/3
-    JWST_03 = (sim_03_number_of_sources[:, 1, 0] + sim_03_number_of_sources[:, 1, 1] + sim_03_number_of_sources[:, 1, 2])/3
-
-    HST_04 = (sim_04_number_of_sources[:, 0, 0] + sim_04_number_of_sources[:, 0, 1] + sim_04_number_of_sources[:, 0, 2])/3
-    JWST_04 = (sim_04_number_of_sources[:, 1, 0] + sim_04_number_of_sources[:, 1, 1] + sim_04_number_of_sources[:, 1, 2])/3
-
-    HST_06 = (sim_06_number_of_sources[:, 0, 0] + sim_06_number_of_sources[:, 0, 1] + sim_06_number_of_sources[:, 0, 2])/3
-    JWST_06 = (sim_06_number_of_sources[:, 1, 0] + sim_06_number_of_sources[:, 1, 1] + sim_06_number_of_sources[:, 1, 2])/3
-
-    HST_09 = (sim_09_number_of_sources[:, 0, 0] + sim_09_number_of_sources[:, 0, 1] + sim_09_number_of_sources[:, 0, 2])/3
-    JWST_09 = (sim_09_number_of_sources[:, 1, 0] + sim_09_number_of_sources[:, 1, 1] + sim_09_number_of_sources[:, 1, 2])/3
 
     HST_WFC3CAM_pixel_size = 0.13   # arcsec per pixel
     JWST_NIRCAM_pixel_size = 0.032  # arcsec per pixel
@@ -456,7 +425,6 @@ def step_1():
         data = detect_sources(temp, threshold, npixels)
         sources_sim03_HST[i,2,0], sources_sim03_HST[i,2,1], sources_sim03_HST[i,2,2] = pairs(np.array(data),data.nlabels,X_HST,Y_HST)
 
-
     Nbins_JWST = int(sim_03_ang_size/JWST_NIRCAM_pixel_size)
     ang = sim_03_ang_size/2
     pixels_ang_coords_JWST = (np.linspace(-ang, ang, Nbins_JWST + 1) + np.linspace(-ang, ang, Nbins_JWST + 1))/2
@@ -476,7 +444,6 @@ def step_1():
         temp = np.loadtxt(sim_03_JWST_data_z[i])
         data = detect_sources(temp, threshold, npixels)
         sources_sim03_JWST[i,2,0], sources_sim03_JWST[i,2,1], sources_sim03_JWST[i,2,2] = pairs(np.array(data),data.nlabels,X_JWST,Y_JWST)
-
 
     # -----------------------------------------------------------------------------------------------------------------------------
 
@@ -503,7 +470,6 @@ def step_1():
         data = detect_sources(temp, threshold, npixels)
         sources_sim04_HST[i,2,0], sources_sim04_HST[i,2,1], sources_sim04_HST[i,2,2] = pairs(np.array(data),data.nlabels,X_HST,Y_HST)
 
-
     Nbins_JWST = int(sim_04_ang_size/JWST_NIRCAM_pixel_size)
     ang = sim_04_ang_size/2
     pixels_ang_coords_JWST = (np.linspace(-ang, ang, Nbins_JWST + 1) + np.linspace(-ang, ang, Nbins_JWST + 1))/2
@@ -523,7 +489,6 @@ def step_1():
         temp = np.loadtxt(sim_04_JWST_data_z[i])
         data = detect_sources(temp, threshold, npixels)
         sources_sim04_JWST[i,2,0], sources_sim04_JWST[i,2,1], sources_sim04_JWST[i,2,2] = pairs(np.array(data),data.nlabels,X_JWST,Y_JWST)
-
 
     # ------------------------------------------------------------------------------------------------------------------------
 
@@ -652,27 +617,12 @@ def step_1():
     HST_03_temp_redshifts = np.hstack([sim_03_redshifts[0],0,sim_03_redshifts[1:-1],0,sim_03_redshifts[-1],0,0])
     HST_06_temp_redshifts = np.hstack([sim_06_redshifts,0])
 
-    redshift_mean = np.array(sim_01_redshifts) + \
-                    np.array(sim_02_redshifts) + \
-                    np.array(sim_04_redshifts) + \
-                    np.array(sim_09_redshifts) +  \
-                    HST_03_temp_redshifts + \
-                    HST_06_temp_redshifts
-
-    divider = np.hstack([6, 5, np.ones(len(HST_03[1:-1]))*6, 5, 6, 5, 4])
-    redshift_mean /= divider
-
-    print('Average Redshift:')
-    print(np.round(redshift_mean,2))
-    print(divider)
-
     redshifts_save = np.vstack((np.array(sim_01_redshifts),
                                 np.array(sim_02_redshifts),
                                 HST_03_temp_redshifts,
                                 np.array(sim_04_redshifts),
                                 HST_06_temp_redshifts,
-                                np.array(sim_09_redshifts),
-                                redshift_mean))
+                                np.array(sim_09_redshifts)))
 
     JWST_groups_save = np.vstack((sources_sim01_JWST[:,0,2],
                                   sources_sim01_JWST[:,1,2],
@@ -750,8 +700,6 @@ def step_1():
                                   sim_09_number_of_sources[:,0,1],
                                   sim_09_number_of_sources[:,0,2]))
 
-    print(15)
-
     np.savetxt('processed_data_groups_HST3.dat', HST_groups_save, fmt='%1.3e')
     np.savetxt('processed_data_groups_JWST3.dat', JWST_groups_save, fmt='%1.3e')
     np.savetxt('processed_data_sources_HST3.dat', HST_sources_save, fmt='%1.3e')
@@ -807,10 +755,14 @@ def init_noise():
 def sources_JWST():
 
     plot_style()
+
     JWST_data = sorted(glob.glob('processed/sim06_100/data/sim_06_F150W_z3_*'))
     JWST_data1 = sorted(glob.glob('processed/sim06_100/data/sim_06_F150W_z1_*'))
+
     image1 = np.loadtxt(JWST_data1[17])
+
     sim06_info = sorted(glob.glob('processed/sim06_100/info/info_rei00006_*'))
+
     sim_06_redshifts = []
     for i in range(0,len(JWST_data)):
         redshift, D_A, Angular_size, c_x, c_y, c_z, r = np.loadtxt(sim06_info[i], skiprows=1)
@@ -825,6 +777,7 @@ def sources_JWST():
     pixels_ang_coords_JWST = (np.linspace(-ang, ang, Nbins_JWST + 1) + np.linspace(-ang, ang, Nbins_JWST + 1))/2
     X,Y = np.meshgrid(pixels_ang_coords_JWST,pixels_ang_coords_JWST)
     theta_arcsec = (100 * 1e3) / (D_Angular * 1e6) * 206265/2
+
     image = np.loadtxt(JWST_data[17])
     data = detect_sources(image, 2.5,3)
     N = data.nlabels
@@ -836,14 +789,17 @@ def sources_JWST():
             x_coord[j-1] = np.mean(X[A[:,0],A[:,1]])
             y_coord[j-1] = np.mean(Y[A[:,0],A[:,1]])
 
-    extent=np.array([-ang,ang,-ang,ang])
+    extent = np.array([-ang,ang,-ang,ang])
     sigma = init_noise_JWST()
+
     plt.imshow(image1,interpolation='nearest',cmap=plt.cm.gray,vmax=2*sigma,extent=extent)
-    plt.xlim(-theta_arcsec,theta_arcsec )
-    plt.ylim(-theta_arcsec,theta_arcsec )
+    plt.xlim(-theta_arcsec,theta_arcsec)
+    plt.ylim(-theta_arcsec,theta_arcsec)
+
     positions = (x_coord, -y_coord)
     apertures = CircularAperture(positions, r=0.5)
     apertures.plot(color='red', lw=2, alpha=0.5)
+
     plt.yticks([])
     plt.xticks([])
     plt.savefig('JWST_sources.pdf',format='pdf')
@@ -852,10 +808,14 @@ def sources_JWST():
 def sources_HST():
 
     plot_style()
+
     HST_data = sorted(glob.glob('processed/sim06_100/data/sim_06_f140w_z3_*'))
     HST_data1 = sorted(glob.glob('processed/sim06_100/data/sim_06_f140w_z1_*'))
+
     image1 = np.loadtxt(HST_data1[17])
+
     sim06_info = sorted(glob.glob('processed/sim06_100/info/info_rei00006_*'))
+
     sim_06_redshifts = []
     for i in range(0,len(HST_data)):
         redshift, D_A, Angular_size, c_x, c_y, c_z, r = np.loadtxt(sim06_info[i], skiprows=1)
@@ -870,6 +830,7 @@ def sources_HST():
     pixels_ang_coords_HST = (np.linspace(-ang, ang, Nbins_HST + 1) + np.linspace(-ang, ang, Nbins_HST + 1))/2
     X,Y = np.meshgrid(pixels_ang_coords_HST,pixels_ang_coords_HST)
     theta_arcsec = (100 * 1e3) / (D_Angular * 1e6) * 206265/2
+
     image = np.loadtxt(HST_data[17])
     data = detect_sources(image, 2.0, 3)
     N = data.nlabels
@@ -881,14 +842,17 @@ def sources_HST():
             x_coord[j-1] = np.mean(X[A[:,0],A[:,1]])
             y_coord[j-1] = -np.mean(Y[A[:,0],A[:,1]])
 
-    extent=np.array([-ang,ang,-ang,ang])
+    extent = np.array([-ang,ang,-ang,ang])
     sigma = init_noise()
+
     plt.imshow(image1,interpolation='nearest',cmap=plt.cm.gray,vmax=2*sigma,extent=extent)
-    plt.xlim(-theta_arcsec,theta_arcsec )
-    plt.ylim(-theta_arcsec,theta_arcsec )
+    plt.xlim(-theta_arcsec,theta_arcsec)
+    plt.ylim(-theta_arcsec,theta_arcsec)
+
     positions = (x_coord,y_coord)
     apertures = CircularAperture(positions, r=0.7)
     apertures.plot(color='blue', lw=2.5, alpha=0.5)
+
     plt.yticks([])
     plt.xticks([])
     plt.savefig('HST_sources.pdf',format='pdf')
@@ -1088,68 +1052,31 @@ def four_figure_plot():
 
 def sources_groups_ratios(): #[N Groups]
 
-    redshifts = np.loadtxt('processed_data_redshifts.dat')
+    redshifts = np.loadtxt('processed_data_redshifts4.dat')
+    redshift_sample = np.mean(redshifts, axis=0)
 
-    redshifts_0 = np.vstack((redshifts[0,:],
-                             redshifts[0,:],
-                             redshifts[0,:],
-                             redshifts[1,:],
-                             redshifts[1,:],
-                             redshifts[1,:],
-                             redshifts[2,:],
-                             redshifts[2,:],
-                             redshifts[2,:],
-                             redshifts[3,:],
-                             redshifts[3,:],
-                             redshifts[3,:],
-                             redshifts[4,:],
-                             redshifts[4,:],
-                             redshifts[4,:],
-                             redshifts[5,:],
-                             redshifts[5,:],
-                             redshifts[5,:]))
+    sources_HST = np.loadtxt('processed_data_sources_HST4.dat')
+    sources_JWST = np.loadtxt('processed_data_sources_JWST4.dat')
+    groups_HST = np.loadtxt('processed_data_groups_HST4.dat')
+    groups_JWST = np.loadtxt('processed_data_groups_JWST4.dat')
 
+    sources_HST_mean  = np.zeros_like(sources_HST[:3,:])
+    sources_JWST_mean = np.zeros_like(sources_HST[:3,:])
 
-    sources_HST = np.loadtxt('processed_data_sources_HST3.dat')
-    sources_JWST = np.loadtxt('processed_data_sources_JWST3.dat')
-    groups_HST = np.loadtxt('processed_data_groups_HST3.dat')
-    groups_JWST = np.loadtxt('processed_data_groups_JWST3.dat')
+    HST_ratios = (groups_HST + 1e-26) / (sources_HST + 1e-13)
+    JWST_ratios = (groups_JWST + 1e-26) / (sources_JWST + 1e-13)
 
-    sources_HST += 1e-15
-    sources_JWST += 1e-15
-    groups_HST += 1e-25
-    groups_JWST += 1e-25
+    mean = np.mean(HST_ratios, axis=0)
+    sigma = np.std(HST_ratios, axis=0)
+    sources_HST_mean[1,:] = mean
+    sources_HST_mean[0,:] = mean - sigma
+    sources_HST_mean[2,:] = mean + sigma
 
-    print(np.max(groups_HST))
-    gs_JWST = groups_JWST/sources_JWST
-    gs_HST = groups_HST/sources_HST
-
-    std_JWST = np.zeros(np.shape(redshifts)[1])
-    std_HST = np.zeros(np.shape(redshifts)[1])
-    mean_JWST = np.zeros(np.shape(redshifts)[1])
-    mean_HST = np.zeros(np.shape(redshifts)[1])
-
-    for j in range(np.shape(redshifts)[1]):
-        if(j==np.shape(redshifts)[1]-1):
-            std_JWST[j] = np.std(np.delete(gs_JWST[:,j],[6, 7, 8, 12, 13, 14]))
-            std_HST[j] = np.std(np.delete(gs_HST[:,j],[6, 7, 8, 12, 13, 14]))
-            mean_JWST[j] = np.mean(np.delete(gs_JWST[:,j],[6, 7, 8, 12, 13, 14]))
-            mean_HST[j] = np.mean(np.delete(gs_HST[:,j],[6, 7, 8, 12, 13, 14]))
-        elif(j==np.shape(redshifts)[1]-2):
-            std_JWST[j] = np.std(np.delete(gs_JWST[:,j],[6, 7, 8]))
-            std_HST[j] = np.std(np.delete(gs_HST[:,j],[6, 7, 8]))
-            mean_JWST[j] = np.mean(np.delete(gs_JWST[:,j],[6, 7, 8]))
-            mean_HST[j] = np.mean(np.delete(gs_HST[:,j],[6, 7, 8]))
-        elif(j==np.shape(redshifts)[1]-4):
-            std_JWST[j] = np.std(np.delete(gs_JWST[:,j],[6, 7, 8]))
-            std_HST[j] = np.std(np.delete(gs_HST[:,j],[6, 7, 8]))
-            mean_JWST[j] = np.mean(np.delete(gs_JWST[:,j],[6, 7, 8]))
-            mean_HST[j] = np.mean(np.delete(gs_HST[:,j],[6, 7, 8]))
-        else:
-            std_JWST[j] = np.std(gs_JWST[:,j])
-            std_HST[j] = np.std(gs_HST[:,j])
-            mean_JWST[j] = np.mean(gs_JWST[:,j])
-            mean_HST[j] = np.mean(gs_HST[:,j])
+    mean = np.mean(JWST_ratios , axis=0)
+    sigma = np.std(JWST_ratios , axis=0)
+    sources_JWST_mean[1,:] = mean
+    sources_JWST_mean[0,:] = mean - sigma
+    sources_JWST_mean[2,:] = mean + sigma
 
     plot_style()
     xx = np.array([6,7,8,9,10,11])
@@ -1159,107 +1086,52 @@ def sources_groups_ratios(): #[N Groups]
     plt.xlim(6,11)
     plt.ylim(0,1)
 
-
-    mean_JWST_sigma_1 = mean_JWST + std_JWST
-    mean_JWST_sigma_2 = mean_JWST - std_JWST
-
-    mean_HST_sigma_1 = mean_HST + std_HST
-    mean_HST_sigma_2 = mean_HST - std_HST
-
-    plt.fill_between(redshifts[-1,:],mean_JWST_sigma_2, mean_JWST_sigma_1, facecolor='red', interpolate=True,alpha=0.5)
-    plt.fill_between(redshifts[-1,:],mean_HST_sigma_2, mean_HST_sigma_1, facecolor='blue', interpolate=True,alpha=0.5)
-    plt.plot(redshifts[-1,:],mean_JWST, color='red',lw=3,label='JWST')
-    plt.plot(redshifts[-1,:],mean_HST, color='blue',lw=4,label='HST',ls='--')
+    plt.fill_between(redshifts[-1,:],sources_JWST_mean[0,:], sources_JWST_mean[2,:], facecolor='red', interpolate=True, alpha=0.5)
+    plt.fill_between(redshifts[-1,:],sources_HST_mean[0,:], sources_HST_mean[2,:], facecolor='blue', interpolate=True, alpha=0.5)
+    plt.plot(redshift_sample,sources_JWST_mean[1,:], color='red',lw=3,label='JWST')
+    plt.plot(redshift_sample,sources_HST_mean[1,:], color='blue',lw=4,label='HST',ls='--')
 
     plt.ylabel('Fraction of sources in groups',fontsize=22)
-    plt.xlabel('z',fontsize=24)
+    plt.xlabel('$z$',fontsize=24)
 
     plt.legend(loc='upper right',fontsize=22)
     plt.savefig('groups.pdf',format='pdf')
     plt.show()
 
-def grous_culumative(): # [groups culumative]
+def sources_groups_ratios_culumative(): # [groups culumative]
 
-    redshifts = np.loadtxt('processed_data_redshifts.dat')
-    redshift_sample = np.loadtxt('processed_data_redshifts.dat')[-1,:]
+    redshifts = np.loadtxt('processed_data_redshifts4.dat')
+    redshift_sample = np.mean(redshifts, axis=0)
 
-    redshifts_0 = np.vstack((redshifts[0,:],
-                             redshifts[0,:],
-                             redshifts[0,:],
-                             redshifts[1,:],
-                             redshifts[1,:],
-                             redshifts[1,:],
-                             redshifts[2,:],
-                             redshifts[2,:],
-                             redshifts[2,:],
-                             redshifts[3,:],
-                             redshifts[3,:],
-                             redshifts[3,:],
-                             redshifts[4,:],
-                             redshifts[4,:],
-                             redshifts[4,:],
-                             redshifts[5,:],
-                             redshifts[5,:],
-                             redshifts[5,:]))
+    sources_HST = np.loadtxt('processed_data_sources_HST4.dat')
+    sources_JWST = np.loadtxt('processed_data_sources_JWST4.dat')
+    groups_HST = np.loadtxt('processed_data_groups_HST4.dat')
+    groups_JWST = np.loadtxt('processed_data_groups_JWST4.dat')
 
+    HST_culumative = np.zeros_like(sources_HST)
+    JWST_culumative = np.zeros_like(sources_HST)
 
-    s_HST = np.loadtxt('processed_data_sources_HST3.dat')
-    s_JWST = np.loadtxt('processed_data_sources_JWST3.dat')
-    g_HST = np.loadtxt('processed_data_groups_HST3.dat')
-    g_JWST = np.loadtxt('processed_data_groups_JWST3.dat')
+    sources_HST_mean  = np.zeros_like(sources_HST[:3,:])
+    sources_JWST_mean = np.zeros_like(sources_HST[:3,:])
 
-    std_JWST = np.zeros(np.shape(redshifts)[1])
-    std_HST = np.zeros(np.shape(redshifts)[1])
-    mean_JWST = np.zeros(np.shape(redshifts)[1])
-    mean_HST = np.zeros(np.shape(redshifts)[1])
-    stds_JWST = np.zeros(np.shape(redshifts)[1])
-    stds_HST = np.zeros(np.shape(redshifts)[1])
-    means_JWST = np.zeros(np.shape(redshifts)[1])
-    means_HST = np.zeros(np.shape(redshifts)[1])
+    for i in range(np.shape(sources_HST)[0]):
+        for j in range(np.shape(sources_HST)[1]):
+            HST_culumative[i,j] = (integrate.trapz(y=groups_HST[i,:j][::-1],x=redshifts[i,:j][::-1]) + 1e-26) / \
+                                  (integrate.trapz(y=sources_HST[i,:j][::-1],x=redshifts[i,:j][::-1]) + 1e-13)
+            JWST_culumative[i,j] = (integrate.trapz(y=groups_JWST[i,:j][::-1],x=redshifts[i,:j][::-1]) + 1e-26) / \
+                                   (integrate.trapz(y=sources_JWST[i,:j][::-1],x=redshifts[i,:j][::-1]) + 1e-13)
 
-    for j in range(np.shape(redshifts)[1]):
-        if(j==np.shape(redshifts)[1]-1):
-            std_JWST[j] = np.std(np.delete(g_JWST[:,j],[6, 7, 8, 12, 13, 14]))
-            std_HST[j] = np.std(np.delete(g_HST[:,j],[6, 7, 8, 12, 13, 14]))
-            mean_JWST[j] = np.mean(np.delete(g_JWST[:,j],[6, 7, 8, 12, 13, 14]))
-            mean_HST[j] = np.mean(np.delete(g_HST[:,j],[6, 7, 8, 12, 13, 14]))
-        elif(j==np.shape(redshifts)[1]-2):
-            std_JWST[j] = np.std(np.delete(g_JWST[:,j],[6, 7, 8]))
-            std_HST[j] = np.std(np.delete(g_HST[:,j],[6, 7, 8]))
-            mean_JWST[j] = np.mean(np.delete(g_JWST[:,j],[6, 7, 8]))
-            mean_HST[j] = np.mean(np.delete(g_HST[:,j],[6, 7, 8]))
-        elif(j==np.shape(redshifts)[1]-4):
-            std_JWST[j] = np.std(np.delete(g_JWST[:,j],[6, 7, 8]))
-            std_HST[j] = np.std(np.delete(g_HST[:,j],[6, 7, 8]))
-            mean_JWST[j] = np.mean(np.delete(g_JWST[:,j],[6, 7, 8]))
-            mean_HST[j] = np.mean(np.delete(g_HST[:,j],[6, 7, 8]))
-        else:
-            std_JWST[j] = np.std(g_JWST[:,j])
-            std_HST[j] = np.std(g_HST[:,j])
-            mean_JWST[j] = np.mean(g_JWST[:,j])
-            mean_HST[j] = np.mean(g_HST[:,j])
+    mean = np.mean(HST_culumative, axis=0)
+    sigma = np.std(HST_culumative, axis=0)
+    sources_HST_mean[1,:] = mean
+    sources_HST_mean[0,:] = mean - sigma
+    sources_HST_mean[2,:] = mean + sigma
 
-    for j in range(np.shape(redshifts)[1]):
-        if(j==np.shape(redshifts)[1]-1):
-            stds_JWST[j] = np.std(np.delete(s_JWST[:,j],[6, 7, 8, 12, 13, 14]))
-            stds_HST[j] = np.std(np.delete(s_HST[:,j],[6, 7, 8, 12, 13, 14]))
-            means_JWST[j] = np.mean(np.delete(s_JWST[:,j],[6, 7, 8, 12, 13, 14]))
-            means_HST[j] = np.mean(np.delete(s_HST[:,j],[6, 7, 8, 12, 13, 14]))
-        elif(j==np.shape(redshifts)[1]-2):
-            stds_JWST[j] = np.std(np.delete(s_JWST[:,j],[6, 7, 8]))
-            stds_HST[j] = np.std(np.delete(s_HST[:,j],[6, 7, 8]))
-            means_JWST[j] = np.mean(np.delete(s_JWST[:,j],[6, 7, 8]))
-            means_HST[j] = np.mean(np.delete(s_HST[:,j],[6, 7, 8]))
-        elif(j==np.shape(redshifts)[1]-4):
-            stds_JWST[j] = np.std(np.delete(s_JWST[:,j],[6, 7, 8]))
-            stds_HST[j] = np.std(np.delete(s_HST[:,j],[6, 7, 8]))
-            means_JWST[j] = np.mean(np.delete(s_JWST[:,j],[6, 7, 8]))
-            means_HST[j] = np.mean(np.delete(s_HST[:,j],[6, 7, 8]))
-        else:
-            stds_JWST[j] = np.std(s_JWST[:,j])
-            stds_HST[j] = np.std(s_HST[:,j])
-            means_JWST[j] = np.mean(s_JWST[:,j])
-            means_HST[j] = np.mean(s_HST[:,j])
+    mean = np.mean(JWST_culumative, axis=0)
+    sigma = np.std(JWST_culumative, axis=0)
+    sources_JWST_mean[1,:] = mean
+    sources_JWST_mean[0,:] = mean - sigma
+    sources_JWST_mean[2,:] = mean + sigma
 
     plot_style(yticks=5)
     xx = np.array([6,7,8,9,10,11])
@@ -1269,243 +1141,43 @@ def grous_culumative(): # [groups culumative]
     plt.xlim(6,11)
     plt.ylim(0,1)
 
-    print(std_JWST)
-    print(stds_JWST)
-    mean_JWST_sigma_1 = mean_JWST + std_JWST
-    mean_JWST_sigma_2 = mean_JWST - std_JWST
+    plt.fill_between(redshifts[-1,:],sources_JWST_mean[0,:], sources_JWST_mean[2,:], facecolor='red', interpolate=True, alpha=0.5)
+    plt.fill_between(redshifts[-1,:],sources_HST_mean[0,:], sources_HST_mean[2,:], facecolor='blue', interpolate=True, alpha=0.5)
+    plt.plot(redshift_sample,sources_JWST_mean[1,:], color='red',lw=3,label='JWST')
+    plt.plot(redshift_sample,sources_HST_mean[1,:], color='blue',lw=4,label='HST',ls='--')
 
-    mean_HST_sigma_1 = mean_HST + std_HST
-    mean_HST_sigma_2 = mean_HST - std_HST
-
-    f_JWST_value = np.zeros(len(redshift_sample)-1)
-    f_HST_value = np.zeros(len(redshift_sample)-1)
-
-    f_JWST_valuep = np.zeros(len(redshift_sample)-1)
-    f_HST_valuep = np.zeros(len(redshift_sample)-1)
-
-    f_JWST_valuem = np.zeros(len(redshift_sample)-1)
-    f_HST_valuem = np.zeros(len(redshift_sample)-1)
-
-
-    means_JWST_sigma_1 = means_JWST + stds_JWST
-    means_JWST_sigma_2 = means_JWST - stds_JWST
-
-    means_HST_sigma_1 = means_HST + stds_HST
-    means_HST_sigma_2 = means_HST - stds_HST
-
-    fs_JWST_value = np.zeros(len(redshift_sample)-1)
-    fs_HST_value = np.zeros(len(redshift_sample)-1)
-
-    fs_JWST_valuep = np.zeros(len(redshift_sample)-1)
-    fs_HST_valuep = np.zeros(len(redshift_sample)-1)
-
-    fs_JWST_valuem = np.zeros(len(redshift_sample)-1)
-    fs_HST_valuem = np.zeros(len(redshift_sample)-1)
-
-
-    dz = np.abs((redshift_sample[1:][::-1] - redshift_sample[:-1][::-1]))
-    z_mean = (redshift_sample[1:] + redshift_sample[:-1])/2
-
-
-    mean_JWST_int = (mean_JWST[1:] + mean_JWST[:-1])/2
-    mean_HST_int = (mean_HST[1:] + mean_HST[:-1])/2
-
-    plus_JWST_int = (mean_JWST_sigma_1[1:] + mean_JWST_sigma_1[:-1])/2
-    plus_HST_int = (mean_HST_sigma_1[1:] + mean_HST_sigma_1[:-1])/2
-
-    minus_JWST_int = (mean_JWST_sigma_2[1:] + mean_JWST_sigma_2[:-1])/2
-    minus_HST_int = (mean_HST_sigma_2[1:] + mean_HST_sigma_2[:-1])/2
-
-
-    means_JWST_int = (means_JWST[1:] + means_JWST[:-1])/2
-    means_HST_int = (means_HST[1:] + means_HST[:-1])/2
-
-    pluss_JWST_int = (means_JWST_sigma_1[1:] + means_JWST_sigma_1[:-1])/2
-    pluss_HST_int = (means_HST_sigma_1[1:] + means_HST_sigma_1[:-1])/2
-
-    minuss_JWST_int = (means_JWST_sigma_2[1:] + means_JWST_sigma_2[:-1])/2
-    minuss_HST_int = (means_HST_sigma_2[1:] + means_HST_sigma_2[:-1])/2
-
-    for i in range(len(redshift_sample)-1):
-
-        f_JWST_value[i] = np.sum(mean_JWST_int[:i][::-1]*dz[:i]) + 1e-26
-        f_HST_value[i] = np.sum(mean_HST_int[:i][::-1]*dz[:i]) + 1e-26
-
-        f_JWST_valuep[i] = np.sum(plus_JWST_int[:i][::-1]*dz[:i]) + 1e-26
-        f_HST_valuep[i] = np.sum(plus_HST_int[:i][::-1]*dz[:i]) + 1e-26
-
-        f_JWST_valuem[i] = np.sum(minus_JWST_int[:i][::-1]*dz[:i]) + 1e-26
-        f_HST_valuem[i] = np.sum(minus_HST_int[:i][::-1]*dz[:i]) + 1e-26
-
-        fs_JWST_value[i] = np.sum(means_JWST_int[:i][::-1]*dz[:i]) + 1e-13
-        fs_HST_value[i] = np.sum(means_HST_int[:i][::-1]*dz[:i]) + 1e-13
-
-        fs_JWST_valuep[i] = np.sum(pluss_JWST_int[:i][::-1]*dz[:i]) + 1e-13
-        fs_HST_valuep[i] = np.sum(pluss_HST_int[:i][::-1]*dz[:i]) + 1e-13
-
-        fs_JWST_valuem[i] = np.sum(minuss_JWST_int[:i][::-1]*dz[:i]) + 1e-13
-        fs_HST_valuem[i] = np.sum(minuss_HST_int[:i][::-1]*dz[:i]) + 1e-13
-
-    for i in range(len(f_JWST_valuem)):
-        if(f_JWST_valuem[i]<0):
-            f_JWST_valuem[i] = 0
-
-    for i in range(len(f_HST_valuem)):
-        if(f_HST_valuem[i]<0):
-            f_HST_valuem[i] = 0
-
-    for i in range(len(f_JWST_valuem)):
-        if(f_JWST_valuem[i]<0):
-            f_JWST_valuem[i] = 0
-    '''
-    for i in range(len(f_HST_valuem)):
-        if(0>=fs_HST_valuem[i]):
-            fs_HST_valuem[i] = 1e7
-        if(0>=fs_HST_valuep[i]):
-            fs_HST_valuep[i] = 1e7
-        if(0>=fs_HST_value[i]):
-            fs_HST_value[i] = 1e7
-        if(0>=fs_JWST_valuem[i]):
-            fs_JWST_valuem[i] = 1e7
-        if(0>=fs_JWST_valuep[i]):
-            fs_JWST_valuep[i] = 1e7
-        if(0>=fs_JWST_value[i]):
-            fs_JWST_value[i] = 1e7
-    '''
-
-
-
-    plt.plot(z_mean,f_JWST_value/fs_JWST_value, color='red',lw=3,label='JWST')
-    plt.plot(z_mean,f_HST_value/fs_HST_value, color='blue',lw=4,label='HST',ls='--')
-    plt.fill_between(z_mean,f_JWST_valuem/fs_JWST_valuem, f_JWST_valuep/fs_JWST_valuep, facecolor='red', interpolate=True,alpha=0.5)
-    plt.fill_between(z_mean,f_HST_valuem/fs_HST_valuem, f_HST_valuep/fs_HST_valuep, facecolor='blue', interpolate=True,alpha=0.5)
     plt.plot(7,7/34,'ko',markersize=18)
     plt.plot(7,11/34,'ys',markersize=18)
-    plt.ylabel('$ \\rm f^{m}_{>z} $',fontsize=26)
-    plt.xlabel('z',fontsize=24)
+    plt.ylabel('$ f^{m}_{>z} $',fontsize=26)
+    plt.xlabel('$z$',fontsize=24)
     plt.legend(loc='upper right',fontsize=22)
     plt.savefig('groups_culumative.pdf',format='pdf')
     plt.show()
 
 def sources_population():
 
-    redshifts = np.loadtxt('processed_data_redshifts.dat')
-
-    redshifts_0 = np.vstack((redshifts[0,:],
-                             redshifts[0,:],
-                             redshifts[0,:],
-                             redshifts[1,:],
-                             redshifts[1,:],
-                             redshifts[1,:],
-                             redshifts[2,:],
-                             redshifts[2,:],
-                             redshifts[2,:],
-                             redshifts[3,:],
-                             redshifts[3,:],
-                             redshifts[3,:],
-                             redshifts[4,:],
-                             redshifts[4,:],
-                             redshifts[4,:],
-                             redshifts[5,:],
-                             redshifts[5,:],
-                             redshifts[5,:]))
-    '''
-    dz = np.zeros_like(redshifts)
-    D_phys = 0.2  # [Mpc]
-    z_sample = np.linspace(0,0.02,5000)
-    for i in range(np.shape(redshifts)[0]):
-        print(i)
-        for j in range(np.shape(redshifts)[1]):
-            for k in range(len(z_sample)):
-                D_comoving = D_phys*(1+redshifts[i,j])
-                dist = d.comoving_distance(redshifts[i,j]+z_sample[k],redshifts[i,j], **cosmo)
-                if dist>=D_comoving:
-                    dz[i,j] = z_sample[k]
-                    break
-
-    dz_0 = np.vstack((dz[0,:],
-                     dz[0,:],
-                     dz[0,:],
-                     dz[1,:],
-                     dz[1,:],
-                     dz[1,:],
-                     dz[2,:],
-                     dz[2,:],
-                     dz[2,:],
-                     dz[3,:],
-                     dz[3,:],
-                     dz[3,:],
-                     dz[4,:],
-                     dz[4,:],
-                     dz[4,:],
-                     dz[5,:],
-                     dz[5,:],
-                     dz[5,:]))
-
-    np.savetxt('dz.dat', dz_0, fmt='%1.3e')
-    '''
-    dz_0 = np.loadtxt('dz.dat')
-
-    '''
-    S_ang_s1 = np.pi*np.power(32.3735689973/2,2) * np.ones(np.shape(redshifts)[1])
-    S_ang_s2 = np.pi*np.power(32.4246750341/2,2) * np.ones(np.shape(redshifts)[1])
-    S_ang_s3 = np.pi*np.power(33.9930433782/2,2) * np.ones(np.shape(redshifts)[1])
-    S_ang_s4 = np.pi*np.power(32.4306058448/2,2) * np.ones(np.shape(redshifts)[1])
-    S_ang_s6 = np.pi*np.power(33.213491504/2,2)  * np.ones(np.shape(redshifts)[1])
-    S_ang_s9 = np.pi*np.power(32.4911839894/2,2) * np.ones(np.shape(redshifts)[1])
-
-    S_ang = np.vstack((S_ang_s1,
-                       S_ang_s1,
-                       S_ang_s1,
-                       S_ang_s2,
-                       S_ang_s2,
-                       S_ang_s2,
-                       S_ang_s3,
-                       S_ang_s3,
-                       S_ang_s3,
-                       S_ang_s4,
-                       S_ang_s4,
-                       S_ang_s4,
-                       S_ang_s6,
-                       S_ang_s6,
-                       S_ang_s6,
-                       S_ang_s9,
-                       S_ang_s9,
-                       S_ang_s9))
-
-    np.savetxt('S_ang.dat', S_ang, fmt='%1.3e')
-    '''
     S_ang = np.loadtxt('S_ang.dat')
+    dz_0 = np.loadtxt('dz.dat')
+    redshifts = np.loadtxt('processed_data_redshifts4.dat')
+    redshift_sample = np.mean(redshifts, axis=0)
 
-    sources_HST = np.loadtxt('processed_data_sources_HST3.dat') / S_ang / dz_0
-    sources_JWST = np.loadtxt('processed_data_sources_JWST3.dat') /S_ang / dz_0
+    sources_HST = np.loadtxt('processed_data_sources_HST4.dat') / S_ang / dz_0
+    sources_JWST = np.loadtxt('processed_data_sources_JWST4.dat') / S_ang / dz_0
 
-    std_JWST = np.zeros(np.shape(redshifts)[1])
-    std_HST = np.zeros(np.shape(redshifts)[1])
-    mean_JWST = np.zeros(np.shape(redshifts)[1])
-    mean_HST = np.zeros(np.shape(redshifts)[1])
+    sources_HST_mean  = np.zeros_like(sources_HST[:3,:])
+    sources_JWST_mean = np.zeros_like(sources_HST[:3,:])
 
-    for j in range(np.shape(redshifts)[1]):
-        if(j==np.shape(redshifts)[1]-1):
-            std_JWST[j] = np.std(np.delete(sources_JWST[:,j],[6, 7, 8, 12, 13, 14]))
-            std_HST[j] = np.std(np.delete(sources_HST[:,j],[6, 7, 8, 12, 13, 14]))
-            mean_JWST[j] = np.mean(np.delete(sources_JWST[:,j],[6, 7, 8, 12, 13, 14]))
-            mean_HST[j] = np.mean(np.delete(sources_HST[:,j],[6, 7, 8, 12, 13, 14]))
-        elif(j==np.shape(redshifts)[1]-2):
-            std_JWST[j] = np.std(np.delete(sources_JWST[:,j],[6, 7, 8]))
-            std_HST[j] = np.std(np.delete(sources_HST[:,j],[6, 7, 8]))
-            mean_JWST[j] = np.mean(np.delete(sources_JWST[:,j],[6, 7, 8]))
-            mean_HST[j] = np.mean(np.delete(sources_HST[:,j],[6, 7, 8]))
-        elif(j==np.shape(redshifts)[1]-4):
-            std_JWST[j] = np.std(np.delete(sources_JWST[:,j],[6, 7, 8]))
-            std_HST[j] = np.std(np.delete(sources_HST[:,j],[6, 7, 8]))
-            mean_JWST[j] = np.mean(np.delete(sources_JWST[:,j],[6, 7, 8]))
-            mean_HST[j] = np.mean(np.delete(sources_HST[:,j],[6, 7, 8]))
-        else:
-            std_JWST[j] = np.std(sources_JWST[:,j])
-            std_HST[j] = np.std(sources_HST[:,j])
-            mean_JWST[j] = np.mean(sources_JWST[:,j])
-            mean_HST[j] = np.mean(sources_HST[:,j])
+    mean = np.mean(sources_HST, axis=0)
+    sigma = np.std(sources_HST, axis=0)
+    sources_HST_mean[1,:] = mean
+    sources_HST_mean[0,:] = mean - sigma
+    sources_HST_mean[2,:] = mean + sigma
+
+    mean = np.mean(sources_JWST, axis=0)
+    sigma = np.std(sources_JWST, axis=0)
+    sources_JWST_mean[1,:] = mean
+    sources_JWST_mean[0,:] = mean - sigma
+    sources_JWST_mean[2,:] = mean + sigma
 
     plot_style()
     xx = np.array([6,7,8,9,10,11])
@@ -1515,201 +1187,115 @@ def sources_population():
     plt.xlim(6,11)
     plt.ylim(0,5)
 
-    mean_JWST_sigma_1 = mean_JWST + std_JWST
-    mean_JWST_sigma_2 = mean_JWST - std_JWST
+    plt.fill_between(redshift_sample,sources_JWST_mean[0,:], sources_JWST_mean[2,:], facecolor='red', interpolate=True, alpha=0.5)
+    plt.fill_between(redshift_sample,sources_HST_mean[0,:], sources_HST_mean[2,:], facecolor='blue', interpolate=True, alpha=0.5)
+    plt.plot(redshift_sample,sources_JWST_mean[1,:], color='red',lw=3,label='JWST')
+    plt.plot(redshift_sample,sources_HST_mean[1,:], color='blue',lw=4,label='HST',ls='--')
 
-    mean_HST_sigma_1 = mean_HST + std_HST
-    mean_HST_sigma_2 = mean_HST - std_HST
-
-    plt.fill_between(redshifts[-1,:],mean_JWST_sigma_2, mean_JWST_sigma_1, facecolor='red', interpolate=True,alpha=0.5)
-    plt.fill_between(redshifts[-1,:],mean_HST_sigma_2, mean_HST_sigma_1, facecolor='blue', interpolate=True,alpha=0.5)
-    plt.plot(redshifts[-1,:],mean_JWST, color='red',lw=3,label='JWST')
-    plt.plot(redshifts[-1,:],mean_HST, color='blue',lw=4,label='HST',ls='--')
-
-
-    plt.ylabel('$\\rm \\frac{Number \\thinspace  \\thinspace of \\thinspace   \\thinspace sources}{arcsec^{2} \\thinspace dz}$',fontsize=32)
-    plt.xlabel('z',fontsize=22)
+    plt.ylabel('$N / arcsec^{2} /dz$',fontsize=24)
+    plt.xlabel('$z$',fontsize=24)
 
     plt.legend(loc='upper right',fontsize=22)
     plt.savefig('sources.pdf',format='pdf')
     plt.show()
 
-def culumative_sources():
+
+def sources_population_culumative():
 
     dz_0 = np.loadtxt('dz.dat')
     S_ang = np.loadtxt('S_ang.dat')
-    redshift_sample = np.loadtxt('processed_data_redshifts.dat')[-1,:]
-    redshifts = np.loadtxt('processed_data_redshifts.dat')
 
-    sources_HST = np.loadtxt('processed_data_sources_HST3.dat') / S_ang / dz_0
-    sources_JWST = np.loadtxt('processed_data_sources_JWST3.dat') /S_ang / dz_0
+    redshifts = np.loadtxt('processed_data_redshifts4.dat')
+    redshift_sample = np.mean(redshifts, axis=0)
 
-    std_JWST = np.zeros(np.shape(redshifts)[1])
-    std_HST = np.zeros(np.shape(redshifts)[1])
-    mean_JWST = np.zeros(np.shape(redshifts)[1])
-    mean_HST = np.zeros(np.shape(redshifts)[1])
+    sources_HST = np.loadtxt('processed_data_sources_HST4.dat') / S_ang / dz_0
+    sources_JWST = np.loadtxt('processed_data_sources_JWST4.dat') / S_ang / dz_0
 
-    for j in range(np.shape(redshifts)[1]):
-        if(j==np.shape(redshifts)[1]-1):
-            std_JWST[j] = np.std(np.delete(sources_JWST[:,j],[6, 7, 8, 12, 13, 14]))
-            std_HST[j] = np.std(np.delete(sources_HST[:,j],[6, 7, 8, 12, 13, 14]))
-            mean_JWST[j] = np.mean(np.delete(sources_JWST[:,j],[6, 7, 8, 12, 13, 14]))
-            mean_HST[j] = np.mean(np.delete(sources_HST[:,j],[6, 7, 8, 12, 13, 14]))
-        elif(j==np.shape(redshifts)[1]-2):
-            std_JWST[j] = np.std(np.delete(sources_JWST[:,j],[6, 7, 8]))
-            std_HST[j] = np.std(np.delete(sources_HST[:,j],[6, 7, 8]))
-            mean_JWST[j] = np.mean(np.delete(sources_JWST[:,j],[6, 7, 8]))
-            mean_HST[j] = np.mean(np.delete(sources_HST[:,j],[6, 7, 8]))
-        elif(j==np.shape(redshifts)[1]-4):
-            std_JWST[j] = np.std(np.delete(sources_JWST[:,j],[6, 7, 8]))
-            std_HST[j] = np.std(np.delete(sources_HST[:,j],[6, 7, 8]))
-            mean_JWST[j] = np.mean(np.delete(sources_JWST[:,j],[6, 7, 8]))
-            mean_HST[j] = np.mean(np.delete(sources_HST[:,j],[6, 7, 8]))
-        else:
-            std_JWST[j] = np.std(sources_JWST[:,j])
-            std_HST[j] = np.std(sources_HST[:,j])
-            mean_JWST[j] = np.mean(sources_JWST[:,j])
-            mean_HST[j] = np.mean(sources_HST[:,j])
+    sources_HST_culumative = np.zeros_like(sources_HST)
+    sources_JWST_culumative = np.zeros_like(sources_HST)
 
-    mean_JWST_sigma_1 = mean_JWST + std_JWST
-    mean_JWST_sigma_2 = mean_JWST - std_JWST
+    sources_HST_mean  = np.zeros_like(sources_HST[:3,:])
+    sources_JWST_mean = np.zeros_like(sources_HST[:3,:])
 
-    mean_HST_sigma_1 = mean_HST + std_HST
-    mean_HST_sigma_2 = mean_HST - std_HST
+    for i in range(np.shape(sources_HST)[0]):
+        for j in range(np.shape(sources_HST)[1]):
+            sources_HST_culumative[i,j] = integrate.trapz(y=sources_HST[i,:j][::-1],x=redshifts[i,:j][::-1])
+            sources_JWST_culumative[i,j] = integrate.trapz(y=sources_JWST[i,:j][::-1],x=redshifts[i,:j][::-1])
 
-    print(redshift_sample)
-    print(mean_HST_sigma_1)
-    print(mean_HST)
-    print(mean_HST_sigma_2)
+    mean = np.mean(sources_HST_culumative, axis=0)
+    sigma = np.std(sources_HST_culumative, axis=0)
+    sources_HST_mean[1,:] = mean
+    sources_HST_mean[0,:] = mean - sigma
+    sources_HST_mean[2,:] = mean + sigma
 
-    f_JWST_value = np.zeros(len(redshift_sample)-1)
-    f_HST_value = np.zeros(len(redshift_sample)-1)
+    mean = np.mean(sources_JWST_culumative, axis=0)
+    sigma = np.std(sources_JWST_culumative, axis=0)
+    sources_JWST_mean[1,:] = mean
+    sources_JWST_mean[0,:] = mean - sigma
+    sources_JWST_mean[2,:] = mean + sigma
 
-    f_JWST_valuep = np.zeros(len(redshift_sample)-1)
-    f_HST_valuep = np.zeros(len(redshift_sample)-1)
-
-    f_JWST_valuem = np.zeros(len(redshift_sample)-1)
-    f_HST_valuem = np.zeros(len(redshift_sample)-1)
-
-    dz = np.abs((redshift_sample[1:][::-1] - redshift_sample[:-1][::-1]))
-    z_mean = (redshift_sample[1:] + redshift_sample[:-1])/2
-
-    mean_JWST_int = (mean_JWST[1:] + mean_JWST[:-1])/2
-    mean_HST_int = (mean_HST[1:] + mean_HST[:-1])/2
-
-    plus_JWST_int = (mean_JWST_sigma_1[1:] + mean_JWST_sigma_1[:-1])/2
-    plus_HST_int = (mean_HST_sigma_1[1:] + mean_HST_sigma_1[:-1])/2
-
-    minus_JWST_int = (mean_JWST_sigma_2[1:] + mean_JWST_sigma_2[:-1])/2
-    minus_HST_int = (mean_HST_sigma_2[1:] + mean_HST_sigma_2[:-1])/2
-
-    for i in range(len(redshift_sample)-1):
-
-        f_JWST_value[i] = np.sum(mean_JWST_int[:i][::-1]*dz[:i])
-        f_HST_value[i] = np.sum(mean_HST_int[:i][::-1]*dz[:i])
-
-        f_JWST_valuep[i] = np.sum(plus_JWST_int[:i][::-1]*dz[:i])
-        f_HST_valuep[i] = np.sum(plus_HST_int[:i][::-1]*dz[:i])
-
-        f_JWST_valuem[i] = np.sum(minus_JWST_int[:i][::-1]*dz[:i])
-        f_HST_valuem[i] = np.sum(minus_HST_int[:i][::-1]*dz[:i])
-
-    xdf_data = np.array([ 3.68,  3.91,  4.37,  4.43,  3.63,  3.72,  3.91,  4.27,  3.58,
-        3.68,  3.4 ,  4.43,  3.23,  3.49,  3.63,  3.63,  3.77,  3.77,
-        4.01,  3.68,  3.87,  3.15,  4.48,  3.32,  3.77,  4.48,  4.27,
-        3.36,  2.76,  3.58,  3.68,  3.32,  3.15,  3.82,  3.77,  3.23,
-        4.01,  3.77,  3.72,  3.58,  3.54,  3.49,  3.63,  4.27,  4.48,
-        3.87,  2.95,  4.22,  4.22,  4.22,  3.68,  4.37,  4.16,  2.79,
-        3.63,  4.27,  2.91,  3.63,  3.91,  3.58,  3.36,  3.63,  4.43,
-        3.19,  3.77,  3.72,  4.27,  3.72,  3.54,  4.27,  3.58,  3.58,
-        3.36,  3.68,  3.82,  3.87,  3.54,  4.27,  3.49,  4.22,  3.36,
-        4.22,  4.11,  3.63,  3.45,  3.58,  4.37,  3.96,  4.16,  4.01,
-        4.48,  4.22,  3.68,  3.07,  3.68,  3.63,  3.72,  4.32,  3.87,
-        4.11,  3.87,  3.91,  3.77,  4.37,  3.87,  4.01,  3.77,  4.54,
-        3.23,  4.43,  3.72,  3.32,  3.96,  3.49,  4.22,  3.82,  4.22,
-        4.54,  3.03,  3.87,  3.87,  3.49,  3.36,  3.77,  3.23,  3.96,
-        3.4 ,  3.82,  3.63,  4.54,  3.68,  3.77,  4.16,  3.72,  3.54,
-        3.82,  4.43,  3.54,  3.32,  4.48,  4.01,  3.77,  3.58,  3.77,
-        3.32,  3.45,  3.63,  3.68,  2.83,  4.11,  4.01,  4.32,  4.48,
-        3.49,  3.58,  3.77,  3.87,  3.45,  3.32,  3.68,  3.91,  3.54,
-        3.36,  3.72,  3.36,  3.58,  4.48,  3.07,  3.36,  3.77,  3.58,
-        3.45,  3.32,  3.87,  3.49,  3.87,  4.11,  4.27,  3.68,  2.95,
-        3.32,  4.11,  3.91,  3.36,  3.68,  3.58,  3.32,  3.91,  3.91,
-        3.58,  3.23,  3.63,  3.4 ,  3.72,  3.58,  3.96,  3.77,  4.06,
-        3.58,  4.06,  3.87,  3.68,  3.63,  3.82,  4.32,  3.72,  3.87,
-        4.37,  3.4 ,  4.06,  4.01,  3.91,  3.58,  3.68,  4.11,  4.27,
-        3.72,  3.4 ,  4.16,  3.68,  3.4 ,  4.43,  3.49,  4.11,  3.87,
-        2.95,  3.96,  3.49,  4.22,  3.58,  4.37,  3.45,  3.11,  3.96,
-        3.49,  4.22,  3.87,  3.82,  3.77,  4.43,  3.45,  3.72,  3.58,
-        4.16,  3.82,  4.22,  3.77,  4.37,  4.11,  3.72,  4.43,  3.87,
-        3.77,  3.4 ,  3.82,  4.01,  3.45,  4.27,  2.83,  3.91,  4.37,
-        3.91,  4.37,  4.59,  4.01,  4.06,  4.01,  3.72,  3.77,  3.54,
-        3.82,  3.27,  3.77,  3.72,  3.03,  3.4 ,  3.49,  3.03,  3.36,
-        2.95,  3.54,  3.82,  4.16,  3.49,  3.45,  3.58,  4.27,  3.36,
-        3.72,  4.11,  3.49,  4.22,  3.27,  4.22,  4.06,  4.06,  4.37,
-        4.22,  3.45,  3.91,  4.01,  3.68,  2.91,  3.49,  3.63,  3.49,
-        4.06,  3.4 ,  3.96,  3.36,  3.54,  3.27,  3.77,  3.49,  4.22,
-        4.27,  3.82,  3.36,  4.06,  2.79,  3.72,  4.11,  3.77,  4.01,
-        3.54,  3.4 ,  4.37,  4.01,  3.96,  4.32,  3.19,  4.16,  2.91,
-        4.11,  3.11,  4.43,  3.23,  4.43,  3.72,  3.32,  4.32,  3.72,
-        3.4 ,  4.11,  3.45,  2.76,  3.72,  3.63,  4.27,  3.36,  3.49,
-        3.68,  3.03,  3.11,  3.96,  3.27,  3.63,  3.32,  3.58,  3.58,
-        3.91,  3.58,  4.01,  4.06,  3.49,  4.32,  3.45,  3.4 ,  4.76,
-        4.32,  4.76,  4.65,  4.54,  5.06,  4.65,  4.7 ,  4.59,  4.94,
-        5.24,  5.18,  4.65,  5.49,  4.94,  5.36,  5.43,  5.36,  4.94,
-        4.76,  4.88,  4.43,  4.94,  4.59,  5.06,  5.36,  4.76,  5.  ,
-        4.76,  5.06,  4.54,  5.  ,  4.7 ,  4.54,  4.76,  4.82,  4.88,
-        4.82,  4.65,  5.3 ,  5.06,  5.43,  4.76,  4.65,  4.54,  4.76,
-        4.48,  4.94,  4.82,  5.36,  4.06,  5.43,  5.24,  5.12,  5.24,
-        4.65,  5.43,  4.65,  4.65,  4.76,  4.54,  4.76,  4.94,  5.3 ,
-        4.94,  5.43,  4.65,  5.06,  5.36,  4.59,  5.56,  5.49,  5.36,
-        4.88,  4.54,  4.65,  5.36,  4.7 ,  4.48,  4.43,  4.94,  4.48,
-        5.06,  4.7 ,  4.82,  5.49,  4.54,  5.3 ,  5.06,  5.3 ,  5.12,
-        4.43,  5.18,  5.06,  4.65,  4.65,  4.94,  4.7 ,  4.94,  5.06,
-        5.3 ,  5.69,  5.24,  4.22,  4.48,  4.65,  5.18,  4.82,  4.76,
-        4.59,  5.  ,  5.36,  5.49,  5.12,  5.18,  5.18,  4.54,  4.27,
-        4.65,  5.  ,  5.49,  4.59,  4.54,  5.24,  4.65,  5.18,  4.82,
-        4.65,  5.49,  4.59,  5.24,  5.18,  5.  ,  5.18,  5.49,  5.3 ,
-        4.37,  5.82,  6.1 ,  6.1 ,  5.62,  5.62,  6.1 ,  5.49,  5.49,
-        5.96,  5.82,  5.62,  6.32,  5.89,  6.1 ,  5.89,  5.76,  5.56,
-        5.82,  5.49,  5.76,  5.62,  6.39,  5.96,  5.76,  5.82,  5.69,
-        6.17,  6.24,  5.62,  6.1 ,  6.1 ,  5.96,  6.39,  6.1 ,  5.89,
-        5.82,  5.82,  5.82,  6.1 ,  5.62,  6.03,  5.56,  6.17,  6.17,
-        6.1 ,  6.03,  6.24,  5.76,  6.17,  6.24,  6.17,  6.17,  5.89,
-        6.03,  6.32,  5.62,  5.69,  6.03,  6.03,  6.17,  6.17,  6.1 ,
-        6.1 ,  5.96,  6.24,  6.32,  5.82,  6.1 ,  6.46,  5.76,  5.96,
-        6.24,  6.03,  6.54,  5.69,  5.69,  6.03,  6.03,  6.32,  5.62,
-        5.76,  6.03,  6.1 ,  6.1 ,  6.1 ,  5.24,  6.46,  6.46,  6.32,
-        6.77,  6.32,  6.69,  6.39,  6.69,  7.33,  6.32,  7.08,  6.77,
-        6.84,  7.  ,  6.24,  6.24,  6.61,  6.69,  7.  ,  6.39,  6.46,
-        6.46,  6.61,  6.39,  6.69,  6.1 ,  6.32,  6.54,  6.77,  7.49,
-        6.84,  6.92,  6.46,  7.75,  6.46,  6.54,  6.24,  7.08,  6.84,
-        6.1 ,  6.54,  7.  ,  6.24,  6.92,  7.  ,  6.46,  6.84,  6.39,
-        6.32,  6.84,  7.16,  6.17,  7.49,  6.54,  6.39,  7.75,  7.93,
-        7.08,  7.49,  7.75,  7.93,  7.49,  7.33,  7.49,  7.16,  7.49,
-        7.49,  7.58,  7.84,  7.49,  8.29,  8.11,  8.02,  8.2 ,  8.29,
-        7.66,  7.75,  7.33,  7.58,  7.93,  9.78,  9.68])
+    xdf_data = np.loadtxt('XDF_data.dat')
+    xdf_data = np.reshape(xdf_data,np.shape(xdf_data)[0]*np.shape(xdf_data)[1])
 
     plot_style()
+
     xx = np.array([6,7,8,9,10,11])
     yy = np.array([0.1,1,10,100,1000])
-
     plt.xticks(xx, fontsize=24)
     plt.xlim(6,11)
-    A = np.max(f_HST_value)/125
+    A = np.max(sources_HST_mean[1,:])/155
+
     plt.hist(xdf_data, bins=np.linspace(5.9,11,1000), histtype='step', cumulative=-1,color='k',lw=3)
-    plt.plot(z_mean,f_JWST_value/A, color='red',lw=3,label='JWST')
-    plt.plot(z_mean,f_HST_value/A, color='blue',lw=4,label='HST',ls='--')
+    plt.plot(redshift_sample,sources_JWST_mean[1,:]/A, color='red',lw=3,label='JWST')
+    plt.plot(redshift_sample,sources_HST_mean[1,:]/A, color='blue',lw=4,label='HST',ls='--')
     plt.plot([1e4,1e5],[1e2,1e4],color='k',lw=3,label='XDF data')
-    plt.fill_between(z_mean,f_JWST_valuem/A, f_JWST_valuep/A, facecolor='red', interpolate=True,alpha=0.5)
-    plt.fill_between(z_mean,f_HST_valuem/A, f_HST_valuep/A, facecolor='blue', interpolate=True,alpha=0.5)
-    plt.xlabel('z',fontsize=22)
-    plt.ylabel('$\\rm N_{>z} $',fontsize=26)
+
+    plt.fill_between(redshift_sample,sources_JWST_mean[0,:]/A, sources_JWST_mean[2,:]/A, facecolor='red', interpolate=True,alpha=0.5)
+    plt.fill_between(redshift_sample,sources_HST_mean[0,:]/A, sources_HST_mean[2,:]/A, facecolor='blue', interpolate=True,alpha=0.5)
+
+    plt.xlabel('$z$',fontsize=24)
+    plt.ylabel('$ N_{>z} $',fontsize=26)
     plt.legend(loc='upper right',fontsize=22)
     plt.yscale('log')
-    plt.ylim(0.1,1000)
+    plt.ylim(0.1, 1000)
     plt.yticks(yy, fontsize=24)
+
     fixlogax(plt.gca(), a='y')
+
     plt.savefig('sources_culumative.pdf',format='pdf')
     plt.show()
+
+def files_correction():
+
+    file = np.loadtxt('dz.dat')
+    #file = np.loadtxt('processed_data_redshifts3.dat')
+
+    for j in range(np.shape(file)[1]):
+        if(j==np.shape(file)[1]-1):
+            numbers = np.array([6, 7, 8, 12, 13, 14])
+            mean = np.mean(np.delete(file[:,j],numbers))
+            file[:,j][numbers] = mean
+        elif(j==np.shape(file)[1]-2):
+            numbers = np.array([6, 7, 8])
+            mean = np.mean(np.delete(file[:,j],numbers))
+            file[:,j][numbers] = mean
+        elif(j==np.shape(file)[1]-4):
+            numbers = np.array([6, 7, 8])
+            mean = np.mean(np.delete(file[:,j],numbers))
+            file[:,j][numbers] = mean
+        elif(j==1):
+            numbers = np.array([6, 7, 8])
+            mean = np.mean(np.delete(file[:,j],numbers))
+            file[:,j][numbers] = mean
+
+    #np.savetxt('processed_data_groups_HST4.dat', file, fmt='%1.3e')
+    np.savetxt('dz.dat', file, fmt='%1.3e')
+
+
+sources_groups_ratios()
+sources_groups_ratios_culumative()
+
+sources_population()
+sources_population_culumative()
+
 
