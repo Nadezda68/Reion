@@ -392,7 +392,7 @@ def main():
                     flux_noise_PSF200 = signal.fftconvolve(flux_noise200, PSF200, mode='same')
                     flux_noise_psf_std200 = flux_noise_PSF200/noise_std200
 
-                    flux_noise_psf_std = flux_noise_psf_std150 + flux_noise_psf_std200  # + flux_noise_psf_std115
+                    flux_noise_psf_std = flux_noise_psf_std150 + flux_noise_psf_std200  + flux_noise_psf_std115
 
                     # SOURCES DETECTION
 

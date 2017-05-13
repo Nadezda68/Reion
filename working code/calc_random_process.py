@@ -135,7 +135,7 @@ def sources_population_cumulative():
     plt.plot(np.mean(redshift[:, 1:], axis=1), np.mean(sources_HST_cumul_full[:, 1:], axis=1), '-', color='blue', lw=3,label= 'HST',zorder=3)
     plt.plot(np.mean(redshift[:, 1:], axis=1), np.mean(sources_JWST_cumul_full[:, 1:], axis=1), '--', color='red', lw=4, label='JWST', zorder=3)
 
-    xdf_data = np.loadtxt('../old/data_processed_files/XDF_data_new.dat')
+    xdf_data = np.loadtxt('real/XDF_data.dat')
     xdf_data = xdf_data.flatten()
     xdf_data, bins = np.histogram(xdf_data, bins=np.linspace(5.25, 11, 1000))
 
@@ -151,6 +151,9 @@ def sources_population_cumulative():
     plt.fill_between(bins_c, xdf_data_cum - f_var(xdf_data_cum), xdf_data_cum + f_var(xdf_data_cum), facecolor='black', interpolate=True, alpha=0.4, zorder=1)
     plt.plot([1e4, 1e5], [1e2, 1e4], color='k', lw=3, label='XDF data')
 
+    output = np.vstack([np.mean(redshift[:, 1:], axis=1),np.mean(sources_HST_cumul_full[:, 1:], axis=1),np.mean(sources_JWST_cumul_full[:, 1:], axis=1)])
+    np.savetxt('HST_JWST_data.dat',output.T,fmt='%.4e')
+
     plt.xlabel('$z$',fontsize=26)
     plt.ylabel('$ N_{>z} $',fontsize=26)
     plt.yscale('log')
@@ -158,7 +161,7 @@ def sources_population_cumulative():
     plt.legend(loc='upper right', fontsize=20)
     fixlogax(plt.gca(), a='y')
     plt.ylim(1, 1000)
-    plt.savefig('N_sources_cum.pdf', fmt='pdf')
+    #plt.savefig('N_sources_cum.pdf', fmt='pdf')
 
     plt.show()
 
@@ -369,9 +372,63 @@ def luminosity(z_min=6):
     plt.savefig('fluxes_z'+str(z_min)+'_v1.pdf',format='pdf')
     plt.show()
 
+def sources_groups_cumulative_diff(gr_crit=3):
+
+    plot_style()
+
+    xx = np.array([6,7,8,9,10,11])
+    yy = np.array([0.0, 0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,1.0])
+    plt.xticks(xx, fontsize=24)
+    plt.xlim(6, 10)
+
+    sources_HST_full_3 = np.zeros((28, 6))
+    sources_JWST_full_3 = np.zeros((28, 6))
+
+    for sim, sim_num in zip(['0', '1', '2', '4', '5', '6'], [0, 1, 2, 3, 4, 5]):
+
+        # RANDOM
+        sources_HST = np.zeros((28, 3))
+        groups_HST_3 = np.zeros((28, 3))
+        sources_JWST = np.zeros((28, 3))
+        groups_JWST_3 = np.zeros((28, 3))
+
+        for i in range(28):
+            for k, proj in zip([0,1,2],['x','y','z']):
+
+                A_H = np.loadtxt(path + 'HST/' + sim + '/' + proj + '/objects_iso_' + str(i) + '_' + filter + '_HST_' + sigma + '.dat')
+                B_H = np.loadtxt(path + 'HST/' + sim + '/' + proj + '/objects_gr_3_' + str(i) + '_' + filter + '_HST_' + sigma + '.dat')
+                sources_HST[i, k] += (A_H.size + B_H.size)
+                groups_HST_3[i, k] += (B_H.size)
+                A_J = np.loadtxt(path + 'JWST/'+ sim +'/' + proj + '/objects_iso_' + str(i) + '_' + '150' + '_JWST_' + '2' + '.dat')
+                B_J = np.loadtxt(path + 'JWST/'+ sim +'/' + proj + '/objects_gr_3_' + str(i) + '_' + '150' + '_JWST_' + '2' + '.dat')
+                sources_JWST[i] += (A_J.size + B_J.size)
+                groups_JWST_3[i] += B_J.size
+
+        sources_HST = np.mean(sources_HST, axis=1)
+        groups_3_HST = np.mean(groups_HST_3, axis=1)
+        sources_JWST = np.mean(sources_JWST, axis=1)
+        groups_3_JWST = np.mean(groups_JWST_3, axis=1)
+
+        sources_HST_full_3[:,sim_num] = (groups_3_HST + 1e-26)/(sources_HST + 1e-13)
+        sources_JWST_full_3[:, sim_num] = (groups_3_JWST + 1e-26) / (sources_JWST + 1e-13)
+
+    plt.plot(np.mean(redshift[:, 1:],axis=1),  np.mean(sources_HST_full_3[:, 1:], axis=1), lw=3, color='blue', label='HST')
+    plt.plot(np.mean(redshift[:, 1:], axis=1), np.mean(sources_JWST_full_3[:, 1:], axis=1), '--',lw=4, color='red', label='JWST')
+
+    plt.xlabel('$z$', fontsize=26)
+    plt.ylabel('$ f^{m}_{z} $', fontsize=26)
+    plt.yticks(yy, fontsize=24)
+    plt.ylim(0, 0.4)
+    plt.legend(loc='upper right', fontsize=20, numpoints=1)
+    plt.savefig('N_groups_diff.pdf', fmt='pdf')
+
+    plt.show()
+
+
 sigma = '2'  # threshold = [2.5, 2.75, 3.0, 3.5, 4.0]
 filter = '160'
 
 #sources_population_cumulative()
 #luminosity(z_min=7)
-sources_groups_cumulative(gr_crit=3)
+#sources_groups_cumulative(gr_crit=3)
+sources_groups_cumulative_diff(gr_crit=3)

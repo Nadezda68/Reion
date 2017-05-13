@@ -154,67 +154,55 @@ def sources_groups_cumulative(gr_crit=3):
     plt.xticks(xx, fontsize=24)
     plt.xlim(6,11)
 
-    sources_HST_cumulative_full_3 = np.zeros((28, 6))
-    sources_JWST_cumulative_full_3 = np.zeros((28, 6))
+    sources_HST_cumulative_full_3 = np.zeros(4)
+    sources_JWST_cumulative_full_3 = np.zeros(4)
 
-    for sim, sim_num in zip(['0', '1', '2', '4', '5', '6'], [0, 1, 2, 3, 4, 5]):
+    sources_HST = np.zeros((4, 3))
+    groups_HST_3 = np.zeros((4, 3))
+    sources_JWST = np.zeros((4, 3))
+    groups_JWST_3 = np.zeros((4, 3))
 
-        # RANDOM
-        sources_HST = np.zeros((28, 3))
-        groups_HST_3 = np.zeros((28, 3))
-        sources_JWST = np.zeros((28,3))
-        groups_JWST_3 = np.zeros((28,3))
 
-        for i in range(28):
-            for k, proj in zip([0,1,2],['x','y','z']):
+    for i in range(4):
+        for k, proj in zip([0,1,2],['x','y','z']):
 
-                A_H = np.loadtxt(path + 'HST/' + sim + '/' + proj + '/objects_iso_' + str(i) + '_' + filter + '_HST_' + sigma + '.dat')
-                B_H = np.loadtxt(path + 'HST/' + sim + '/' + proj + '/objects_gr_3_' + str(i) + '_' + filter + '_HST_' + sigma + '.dat')
-                sources_HST[i, k] += (A_H.size + B_H.size)
-                groups_HST_3[i, k] += (B_H.size)
-                A_J = np.loadtxt(path + 'JWST/'+ sim +'/' + proj + '/objects_iso_' + str(i) + '_' + '150' + '_JWST_' + '2' + '.dat')
-                B_J = np.loadtxt(path + 'JWST/'+ sim +'/' + proj + '/objects_gr_3_' + str(i) + '_' + '150' + '_JWST_' + '2' + '.dat')
-                sources_JWST[i] += (A_J.size + B_J.size)
-                groups_JWST_3[i] += B_J.size
+            A_H = np.loadtxt(path + 'HST/' + proj + '/objects_iso_' + str(i) + '_' + filter + '_HST_' + sigma + '.dat')
+            B_H = np.loadtxt(path + 'HST/'  + proj + '/objects_gr_3_' + str(i) + '_' + filter + '_HST_' + sigma + '.dat')
+            if i==0:
+                A_J = np.loadtxt(path + 'JWST/' + proj + '/objects_iso_' + str(i) + '_150_JWST_' + sigma + '.dat')
+                B_J = np.loadtxt(path + 'JWST/' + proj + '/objects_gr_3_' + str(i) + '_150_JWST_' + sigma + '.dat')
+                sources_JWST[i, k] += (A_J.size + B_J.size)
+                groups_JWST_3[i, k] += (B_J.size)
+            elif i==1:
+                sources_JWST[i, k] += 0.0
+                groups_JWST_3[i, k] += 0.0
+            else:
+                A_J = np.loadtxt(path + 'JWST/' + proj + '/objects_alone_' + str(i-2) + '_150_JWST_' + sigma + '.dat')
+                B_J = np.loadtxt(path + 'JWST/' + proj + '/objects_group_' + str(i-2) + '_150_JWST_' + sigma + '.dat')
+                sources_JWST[i, k] += (A_J.size + B_J.size)
+                groups_JWST_3[i, k] += (B_J.size)
 
-        sources_HST = sources_HST
-        groups_3_HST = groups_HST_3
-        sources_JWST = sources_JWST
-        groups_3_JWST = groups_JWST_3
+            sources_HST[i, k] += (A_H.size + B_H.size)
+            groups_HST_3[i, k] += (B_H.size)
 
-        sources_HST_cumulative = np.zeros_like(sources_HST)
-        groups_HST_3_cumulative = np.zeros_like(groups_3_HST)
-        sources_JWST_cumulative = np.zeros_like(sources_HST)
-        groups_JWST_3_cumulative = np.zeros_like(groups_3_HST)
+    sources_HST = np.mean(sources_HST,axis=1)
+    groups_3_HST = np.mean(groups_HST_3,axis=1)
+    sources_JWST = np.mean(sources_JWST, axis=1)
+    groups_3_JWST = np.mean(groups_JWST_3, axis=1)
 
-        for j in range(len(sources_HST)):  # redshifts
-            sources_HST_cumulative[j] = integrate.trapz(y=sources_HST[:j+1][::-1], x=redshift[:j+1, sim_num][::-1])
-            groups_HST_3_cumulative[j] = integrate.trapz(y=groups_3_HST[:j+1][::-1], x=redshift[:j+1, sim_num][::-1])
-            sources_JWST_cumulative[j] = integrate.trapz(y=sources_JWST[:j + 1][::-1], x=redshift[:j + 1, sim_num][::-1])
-            groups_JWST_3_cumulative[j] = integrate.trapz(y=groups_3_JWST[:j + 1][::-1], x=redshift[:j + 1, sim_num][::-1])
+    full_HST = (groups_3_HST+1e-26)/(sources_HST +1e-13)
+    full_JWST = (groups_3_JWST + 1e-26) / (sources_JWST + 1e-13)
 
-        sources_HST_cumulative_full_3[:,sim_num] = (groups_HST_3_cumulative+1e-26)/(sources_HST_cumulative+1e-13)
-        sources_JWST_cumulative_full_3[:, sim_num] = (groups_JWST_3_cumulative + 1e-26) / (sources_JWST_cumulative + 1e-13)
-
-    # counts (poisson + cosmic var)
-    # 34 +- 12 (10) [15]
-    # 7 +- 4
-    # 11 +- 6 (5)
-
-    err2 = 6/27 * np.sqrt((12/27)**2 + (4/6)**2)
-
-    plt.plot(7, 6/27, 'ks', markersize=18, label='XDF')
-    plt.errorbar(7, 6/27, 0.08, lw=3.3, color='black')
-    plt.plot(redshift[:], sources_HST_cumulative_full_3[:,1:], lw=3, color='blue')
-    plt.plot(redshift[:], sources_JWST_cumulative_full_3[:], lw=3, color='red')
+    plt.plot(redshift[:], full_HST, 'b', lw=3, markersize=18, label='HST')
+    plt.plot(redshift[:], full_JWST, 'r^', lw=3, markersize=18, label='JWST')
 
     plt.title('$\\rm thr=3\\sigma$', fontsize=20)
     plt.xlabel('$z$', fontsize=24)
-    plt.ylabel('$ f^{m}_{>z} $', fontsize=26)
+    plt.ylabel('$ f^{m}_{z} $', fontsize=26)
     plt.yticks(yy, fontsize=24)
     plt.ylim(0, 0.5)
     plt.legend(loc='upper right', fontsize=20, numpoints=1)
-    plt.savefig('N_groups_cum.pdf', fmt='pdf')
+    plt.savefig('N_groups_diff_40Mpc.pdf', fmt='pdf')
 
     plt.show()
 
@@ -329,14 +317,14 @@ filter = '160'
 
 #sources_population_cumulative()
 #luminosity(z_min=7)
-#sources_groups_cumulative(gr_crit=3)
+sources_groups_cumulative(gr_crit=3)
 
-
+'''
 proj = 'x'
 
-for i in [3]:
+for i in [2]:
     A = np.loadtxt(path + 'HST/' + '/' + proj + '/objects_iso_' + str(i) + '_' + filter + '_HST_' + sigma + '.dat')
-    B = np.loadtxt(path + 'HST/' + '/' + proj + '/objects_gr_3_' + str(i) + '_' + filter + '_HST_' + sigma + '.dat')
+    B = np.loadtxt(path + 'HST/' + '/' + proj + '/objects_gr_1_' + str(i) + '_' + filter + '_HST_' + sigma + '.dat')
     print(A.size)
     print(B.size)
     obj_x = np.hstack([A, B])
@@ -361,3 +349,4 @@ for sim, sim_num in zip(['0', '1', '2', '4', '5', '6'], [0, 1, 2, 3, 4, 5]):
         print(np.shape(obj_x))
         print(np.max(obj_x))
         print('--------')
+'''
