@@ -107,6 +107,8 @@ def sources_population_cumulative():
 
     sources_HST_cumul_full = np.zeros((28, 6))
     sources_JWST_cumul_full = np.zeros((28, 6))
+    sources_HST_diff_full = np.zeros((28, 6))
+    sources_JWST_diff_full = np.zeros((28, 6))
 
     for sim, sim_num in zip(['0','1','2','4','5','6'], [0,1,2,3,4,5]):
 
@@ -130,8 +132,16 @@ def sources_population_cumulative():
         for j in range(len(sources_HST)):  # redshifts
             sources_HST_cumul_full[j, sim_num] = np.abs(integrate.trapz(y=sources_HST[:j+1], x=redshift[:j+1, sim_num]))
             sources_JWST_cumul_full[j, sim_num] = np.abs(integrate.trapz(y=sources_JWST[:j+1], x=redshift[:j+1, sim_num]))
+            sources_HST_diff_full[j, sim_num] = sources_HST[j]
+            sources_JWST_diff_full[j, sim_num] = sources_JWST[j]
 
+    data = np.vstack([np.mean(redshift[:, 1:], axis=1),
+                      np.mean(sources_HST_diff_full[:, 1:]*S_ang[:,1:]*d_z[:,1:], axis=1)*64/3600/4,
+                      np.mean(sources_JWST_diff_full[:, 1:]*S_ang[:,1:]*d_z[:,1:], axis=1)*64/3600/4,
+                      np.mean(sources_HST_diff_full[:, 1:], axis=1), np.mean(sources_JWST_diff_full[:, 1:], axis=1),
+                      np.mean(sources_HST_cumul_full[:, 1:], axis=1), np.mean(sources_JWST_cumul_full[:, 1:], axis=1)])
 
+    np.savetxt('data3.dat',data.T,fmt='%1.5e')
     plt.plot(np.mean(redshift[:, 1:], axis=1), np.mean(sources_HST_cumul_full[:, 1:], axis=1), '-', color='blue', lw=3,label= 'HST',zorder=3)
     plt.plot(np.mean(redshift[:, 1:], axis=1), np.mean(sources_JWST_cumul_full[:, 1:], axis=1), '--', color='red', lw=4, label='JWST', zorder=3)
 
@@ -428,7 +438,7 @@ def sources_groups_cumulative_diff(gr_crit=3):
 sigma = '2'  # threshold = [2.5, 2.75, 3.0, 3.5, 4.0]
 filter = '160'
 
-#sources_population_cumulative()
+sources_population_cumulative()
 #luminosity(z_min=7)
 #sources_groups_cumulative(gr_crit=3)
-sources_groups_cumulative_diff(gr_crit=3)
+#sources_groups_cumulative_diff(gr_crit=3)

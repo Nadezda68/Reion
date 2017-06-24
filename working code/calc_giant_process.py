@@ -316,7 +316,7 @@ sigma = '2'  # threshold = [2.5, 2.75, 3.0, 3.5, 4.0]
 filter = '160'
 
 #sources_population_cumulative()
-#luminosity(z_min=7)
+luminosity(z_min=7)
 sources_groups_cumulative(gr_crit=3)
 
 '''
